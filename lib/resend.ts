@@ -1,12 +1,16 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error("RESEND_API_KEY is not configured");
+  return new Resend(key);
+}
 
 const FROM = process.env.EMAIL_FROM || "orders@azaleabyzehra.com";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export async function sendOTPEmail(email: string, otp: string): Promise<void> {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to: email,
     subject: "Your Azalea by Zehra verification code",
@@ -48,7 +52,7 @@ export async function sendOrderConfirmationEmail(
     )
     .join("");
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to: email,
     subject: `Order Confirmed — #${order.id.slice(-8).toUpperCase()} | Azalea by Zehra`,
@@ -90,7 +94,7 @@ export async function sendShipmentEmail(
   orderId: string,
   trackingId: string
 ): Promise<void> {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to: email,
     subject: `Your order has shipped! 📦 | Azalea by Zehra`,
