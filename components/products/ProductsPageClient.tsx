@@ -1,0 +1,168 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import ProductCard from "@/components/products/ProductCard";
+import FilterSidebar from "@/components/products/FilterSidebar";
+import ProductQuickView from "@/components/products/ProductQuickView";
+import { Product } from "@/types";
+import { motion } from "framer-motion";
+import { useSearchParams } from "next/navigation";
+
+const DEFAULT_FILTERS = {
+  minPrice: "",
+  maxPrice: "",
+  colors: [] as string[],
+  sizes: [] as string[],
+  fabric: "",
+  sort: "newest",
+};
+
+export default function ProductsPageClient() {
+  const searchParams = useSearchParams();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
+  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+
+  const fetchProducts = useCallback(async (currentPage = 1, currentFilters = filters) => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (searchParams.get("category")) params.set("category", searchParams.get("category")!);
+    if (searchParams.get("search")) params.set("search", searchParams.get("search")!);
+    if (searchParams.get("featured")) params.set("featured", "true");
+    if (searchParams.get("isNewArrival")) params.set("isNewArrival", "true");
+    if (currentFilters.minPrice) params.set("minPrice", currentFilters.minPrice);
+    if (currentFilters.maxPrice) params.set("maxPrice", currentFilters.maxPrice);
+    if (currentFilters.colors.length) params.set("colors", currentFilters.colors.join(","));
+    if (currentFilters.sizes.length) params.set("sizes", currentFilters.sizes.join(","));
+    if (currentFilters.fabric) params.set("fabric", currentFilters.fabric);
+    params.set("sort", currentFilters.sort);
+    params.set("page", currentPage.toString());
+    params.set("pageSize", "12");
+
+    const res = await fetch(`/api/products?${params}`);
+    const data = await res.json();
+    setProducts(data.data || []);
+    setTotal(data.total || 0);
+    setTotalPages(data.totalPages || 1);
+    setLoading(false);
+  }, [filters, searchParams]);
+
+  useEffect(() => {
+    fetchProducts(1, filters);
+    setPage(1);
+  }, [searchParams, filters]);
+
+  const handleFilterChange = (changed: Partial<typeof filters>) => {
+    setFilters((prev) => ({ ...prev, ...changed }));
+  };
+
+  const handleReset = () => setFilters({ ...DEFAULT_FILTERS });
+
+  const categoryName = searchParams.get("category") || "All Products";
+  const searchQuery = searchParams.get("search");
+
+  return (
+    <div className="pt-32 pb-24">
+      {/* Header */}
+      <div className="section-padding mb-10">
+        <motion.p
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="section-subtitle mb-3"
+        >
+          {searchQuery ? "Search Results" : "Collections"}
+        </motion.p>
+        <motion.h1
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="font-playfair text-4xl md:text-5xl text-charcoal capitalize"
+        >
+          {searchQuery ? `"${searchQuery}"` : categoryName.replace(/-/g, " ")}
+        </motion.h1>
+        {total > 0 && !loading && (
+          <p className="font-inter text-sm text-mauve mt-2">{total} styles found</p>
+        )}
+      </div>
+
+      <div className="section-padding flex gap-10">
+        {/* Filter Sidebar */}
+        <FilterSidebar
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          onReset={handleReset}
+        />
+
+        {/* Product Grid */}
+        <div className="flex-1 min-w-0">
+          {loading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="aspect-[3/4] bg-ivory-200" />
+                  <div className="mt-3 space-y-2">
+                    <div className="h-3 bg-ivory-200 w-3/4" />
+                    <div className="h-3 bg-ivory-200 w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-24">
+              <p className="font-playfair text-2xl text-charcoal-light mb-4">No products found</p>
+              <p className="font-inter text-sm text-mauve mb-8">
+                Try adjusting your filters or browse our full collection
+              </p>
+              <button onClick={handleReset} className="btn-outline">
+                Clear Filters
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                {products.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onQuickView={setQuickViewProduct}
+                  />
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-16">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => { setPage(p); fetchProducts(p, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                      className={`w-10 h-10 font-inter text-sm transition-all duration-200 ${
+                        p === page
+                          ? "bg-rose-gold text-white"
+                          : "border border-ivory-200 text-charcoal hover:border-rose-gold hover:text-rose-gold"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Quick View Modal */}
+      {quickViewProduct && (
+        <ProductQuickView
+          product={quickViewProduct}
+          onClose={() => setQuickViewProduct(null)}
+        />
+      )}
+    </div>
+  );
+}

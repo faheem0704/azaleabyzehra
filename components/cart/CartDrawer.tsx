@@ -1,0 +1,186 @@
+"use client";
+
+import { motion, AnimatePresence } from "framer-motion";
+import { X, ShoppingBag, Trash2, Plus, Minus } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useCartStore } from "@/store/cartStore";
+import { formatPrice } from "@/lib/utils";
+import Button from "@/components/ui/Button";
+
+export default function CartDrawer() {
+  const { items, isOpen, closeCart, removeItem, updateQuantity, totalPrice, totalItems } =
+    useCartStore();
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeCart}
+            className="fixed inset-0 z-[70] bg-charcoal/40 backdrop-blur-sm"
+          />
+
+          {/* Drawer */}
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            className="fixed right-0 top-0 bottom-0 z-[80] w-full max-w-md bg-ivory shadow-2xl flex flex-col"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-ivory-200">
+              <div className="flex items-center gap-3">
+                <ShoppingBag size={20} className="text-rose-gold" />
+                <h2 className="font-playfair text-xl text-charcoal">Your Cart</h2>
+                {totalItems() > 0 && (
+                  <span className="bg-rose-gold text-white text-xs font-inter w-5 h-5 rounded-full flex items-center justify-center">
+                    {totalItems()}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={closeCart}
+                className="text-charcoal-light hover:text-rose-gold transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Items */}
+            <div className="flex-1 overflow-y-auto py-4">
+              {items.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full gap-4 px-6">
+                  <ShoppingBag size={48} className="text-ivory-200" />
+                  <p className="font-playfair text-xl text-charcoal-light">Your cart is empty</p>
+                  <p className="text-sm font-inter text-mauve text-center">
+                    Discover our beautiful collection of kurtis and ethnic wear
+                  </p>
+                  <Button onClick={closeCart} variant="outline" size="sm" className="mt-2">
+                    <Link href="/products">Shop Now</Link>
+                  </Button>
+                </div>
+              ) : (
+                <ul className="divide-y divide-ivory-200">
+                  {items.map((item) => (
+                    <motion.li
+                      key={item.id}
+                      layout
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className="flex gap-4 px-6 py-4"
+                    >
+                      {/* Image */}
+                      <div className="relative w-20 h-24 flex-shrink-0 bg-ivory-200 overflow-hidden">
+                        {item.product?.images?.[0] ? (
+                          <Image
+                            src={item.product.images[0]}
+                            alt={item.product.name || "Product"}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-ivory-200" />
+                        )}
+                      </div>
+
+                      {/* Details */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-playfair text-sm text-charcoal leading-snug truncate">
+                          {item.product?.name || "Product"}
+                        </h3>
+                        <p className="text-xs font-inter text-mauve mt-1">
+                          {item.size} · {item.color}
+                        </p>
+                        <p className="text-sm font-inter text-rose-gold font-medium mt-1">
+                          {formatPrice(item.price)}
+                        </p>
+
+                        <div className="flex items-center justify-between mt-3">
+                          {/* Qty */}
+                          <div className="flex items-center border border-ivory-200">
+                            <button
+                              onClick={() =>
+                                updateQuantity(item.productId, item.size, item.color, item.quantity - 1)
+                              }
+                              className="w-7 h-7 flex items-center justify-center text-charcoal hover:text-rose-gold transition-colors"
+                            >
+                              <Minus size={12} />
+                            </button>
+                            <span className="w-8 text-center text-sm font-inter text-charcoal">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() =>
+                                updateQuantity(item.productId, item.size, item.color, item.quantity + 1)
+                              }
+                              className="w-7 h-7 flex items-center justify-center text-charcoal hover:text-rose-gold transition-colors"
+                            >
+                              <Plus size={12} />
+                            </button>
+                          </div>
+
+                          {/* Remove */}
+                          <button
+                            onClick={() => removeItem(item.productId, item.size, item.color)}
+                            className="text-mauve hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </motion.li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Footer */}
+            {items.length > 0 && (
+              <div className="border-t border-ivory-200 px-6 py-6 space-y-4">
+                {/* Promo code */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Promo code"
+                    className="flex-1 border border-ivory-200 px-3 py-2 text-sm font-inter text-charcoal placeholder-mauve focus:outline-none focus:border-rose-gold"
+                  />
+                  <button className="px-4 py-2 border border-charcoal text-charcoal text-xs font-inter tracking-widest uppercase hover:bg-charcoal hover:text-ivory transition-all duration-200">
+                    Apply
+                  </button>
+                </div>
+
+                {/* Total */}
+                <div className="flex items-center justify-between">
+                  <span className="font-inter text-sm text-charcoal-light">Subtotal</span>
+                  <span className="font-playfair text-lg text-charcoal">{formatPrice(totalPrice())}</span>
+                </div>
+                <p className="text-xs font-inter text-mauve">
+                  Shipping & taxes calculated at checkout
+                </p>
+
+                <Link href="/checkout" onClick={closeCart}>
+                  <Button className="w-full" size="lg">
+                    Proceed to Checkout
+                  </Button>
+                </Link>
+                <button
+                  onClick={closeCart}
+                  className="w-full text-center text-sm font-inter text-charcoal-light hover:text-rose-gold transition-colors py-1"
+                >
+                  Continue Shopping →
+                </button>
+              </div>
+            )}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}

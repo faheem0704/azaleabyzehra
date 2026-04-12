@@ -1,0 +1,26 @@
+import { prisma } from "@/lib/prisma";
+import Header from "./Header";
+import Footer from "./Footer";
+import CartDrawer from "@/components/cart/CartDrawer";
+import SessionProvider from "@/components/providers/SessionProvider";
+
+async function getCategories() {
+  return prisma.category.findMany({
+    where: { parentId: null },
+    include: { children: true },
+    orderBy: { name: "asc" },
+  });
+}
+
+export default async function MainLayout({ children }: { children: React.ReactNode }) {
+  const categories = await getCategories();
+
+  return (
+    <SessionProvider>
+      <Header categories={categories} />
+      <main className="min-h-screen">{children}</main>
+      <Footer />
+      <CartDrawer />
+    </SessionProvider>
+  );
+}
