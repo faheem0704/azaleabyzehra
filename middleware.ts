@@ -9,8 +9,8 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
 
-  // Protect admin routes
-  if (pathname.startsWith("/admin")) {
+  // Protect admin routes (but not the login page itself)
+  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
     if (!session) {
       return NextResponse.redirect(new URL("/admin/login", req.url));
     }
