@@ -9,8 +9,8 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
 
-  // Protect admin routes (but not the login page itself)
-  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+  // Protect admin routes — /admin/login is excluded via matcher below
+  if (pathname.startsWith("/admin")) {
     if (!session) {
       return NextResponse.redirect(new URL("/admin/login", req.url));
     }
@@ -30,5 +30,6 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/admin/:path*", "/orders/:path*", "/wishlist/:path*"],
+  // Exclude /admin/login from the middleware so the login page is never intercepted
+  matcher: ["/admin/((?!login).*)", "/orders/:path*", "/wishlist/:path*"],
 };
