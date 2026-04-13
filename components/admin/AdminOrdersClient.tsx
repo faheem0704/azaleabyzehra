@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Truck } from "lucide-react";
+import { ChevronDown, ChevronUp, Truck, Printer } from "lucide-react";
 import { Order } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
@@ -47,6 +47,61 @@ export default function AdminOrdersClient({ orders: initialOrders }: { orders: O
 
   const filtered = statusFilter === "ALL" ? orders : orders.filter((o) => o.status === statusFilter);
 
+  const printLabel = (order: Order) => {
+    const addr = order.address as any;
+    const customerName = (order as any).user?.name || (order as any).user?.email || order.guestEmail || "Guest";
+    const items = order.items.map((item: any) =>
+      `${item.product?.name} — ${item.size} · ${item.color} × ${item.quantity} @ ₹${item.price}`
+    ).join("\n");
+
+    const win = window.open("", "_blank", "width=700,height=600");
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>Shipping Label — #${order.id.slice(-8).toUpperCase()}</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 32px; color: #111; }
+    .label { border: 2px solid #111; padding: 24px; max-width: 560px; margin: 0 auto; }
+    .header { display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding-bottom: 12px; margin-bottom: 16px; }
+    .brand { font-size: 20px; font-weight: bold; }
+    .order-id { font-size: 14px; color: #555; }
+    h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin: 0 0 6px; }
+    p { margin: 2px 0; font-size: 14px; line-height: 1.5; }
+    .section { margin-bottom: 16px; }
+    .items { background: #f9f9f9; padding: 12px; font-size: 13px; white-space: pre-line; }
+    .total { font-size: 16px; font-weight: bold; margin-top: 12px; }
+    .footer { margin-top: 20px; font-size: 11px; color: #aaa; text-align: center; }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <div class="label">
+    <div class="header">
+      <div class="brand">Azalea by Zehra</div>
+      <div class="order-id">Order #${order.id.slice(-8).toUpperCase()}<br/>${new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</div>
+    </div>
+    <div class="section">
+      <h3>Ship To</h3>
+      <p><strong>${addr?.name || customerName}</strong></p>
+      <p>${addr?.phone || ""}</p>
+      <p>${addr?.line1 || ""}${addr?.line2 ? ", " + addr.line2 : ""}</p>
+      <p>${addr?.city || ""}${addr?.state ? ", " + addr.state : ""} — ${addr?.pincode || ""}</p>
+    </div>
+    <div class="section">
+      <h3>Order Items</h3>
+      <div class="items">${items}</div>
+    </div>
+    ${order.trackingId ? `<div class="section"><h3>Tracking ID</h3><p>${order.trackingId}</p></div>` : ""}
+    <p class="total">Total: ₹${order.totalAmount.toFixed(2)}${(order as any).discountAmount > 0 ? ` (Discount: ₹${(order as any).discountAmount.toFixed(2)})` : ""}</p>
+    <div class="footer">Printed from Azalea by Zehra Admin Panel</div>
+  </div>
+  <script>window.onload = function() { window.print(); }</script>
+</body>
+</html>`);
+    win.document.close();
+  };
+
   return (
     <div>
       <div className="mb-8">
@@ -69,29 +124,29 @@ export default function AdminOrdersClient({ orders: initialOrders }: { orders: O
           <div key={order.id} className="bg-white border border-ivory-200 overflow-hidden">
             {/* Row */}
             <div
-              className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-ivory-200/30 transition-colors"
+              className="flex items-start justify-between px-4 md:px-6 py-4 cursor-pointer hover:bg-ivory-200/30 transition-colors gap-3"
               onClick={() => setExpandedId(expandedId === order.id ? null : order.id)}
             >
-              <div className="flex items-center gap-6 flex-wrap">
-                <div>
+              <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 flex-wrap flex-1 min-w-0">
+                <div className="flex items-center gap-3 md:block">
                   <p className="font-inter text-sm font-medium text-charcoal">#{order.id.slice(-8).toUpperCase()}</p>
                   <p className="font-inter text-xs text-mauve">
                     {new Date(order.createdAt).toLocaleDateString()}
                   </p>
                 </div>
-                <div>
-                  <p className="font-inter text-xs text-mauve">Customer</p>
-                  <p className="font-inter text-sm text-charcoal">
+                <div className="flex items-center gap-2 md:block">
+                  <p className="font-inter text-xs text-mauve hidden md:block">Customer</p>
+                  <p className="font-inter text-sm text-charcoal truncate max-w-[160px] md:max-w-none">
                     {(order as any).user?.name || (order as any).user?.email || order.guestEmail || "Guest"}
                   </p>
                 </div>
-                <div>
-                  <p className="font-inter text-xs text-mauve">Amount</p>
+                <div className="flex items-center gap-2 md:block">
+                  <p className="font-inter text-xs text-mauve hidden md:block">Amount</p>
                   <p className="font-playfair text-sm text-charcoal">{formatPrice(order.totalAmount)}</p>
                 </div>
                 <Badge variant={STATUS_COLORS[order.status] || "default"}>{order.status}</Badge>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center flex-shrink-0 pt-0.5">
                 {expandedId === order.id ? <ChevronUp size={16} className="text-mauve" /> : <ChevronDown size={16} className="text-mauve" />}
               </div>
             </div>
@@ -120,13 +175,28 @@ export default function AdminOrdersClient({ orders: initialOrders }: { orders: O
 
                       {/* Address */}
                       <div className="mt-6">
-                        <h3 className="font-inter text-xs tracking-widest uppercase text-charcoal-light mb-2">Delivery Address</h3>
-                        {order.address && (
-                          <p className="font-inter text-xs text-charcoal-light leading-relaxed">
-                            {(order.address as any).name} · {(order.address as any).phone}<br />
-                            {(order.address as any).line1}, {(order.address as any).city}, {(order.address as any).state}
-                          </p>
-                        )}
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-inter text-xs tracking-widest uppercase text-charcoal-light">Delivery Address</h3>
+                          <button
+                            onClick={() => printLabel(order)}
+                            className="flex items-center gap-1.5 text-xs font-inter text-rose-gold hover:text-rose-gold-dark transition-colors"
+                          >
+                            <Printer size={13} />
+                            Print Label
+                          </button>
+                        </div>
+                        {order.address && (() => {
+                          const addr = order.address as any;
+                          return (
+                            <div className="font-inter text-xs text-charcoal-light leading-relaxed space-y-0.5">
+                              <p className="font-medium text-charcoal">{addr.name}</p>
+                              <p>{addr.phone}</p>
+                              <p>{addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}</p>
+                              <p>{addr.city}, {addr.state}</p>
+                              <p className="font-medium text-charcoal">PIN: {addr.pincode}</p>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
 

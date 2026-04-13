@@ -69,14 +69,14 @@ export default function AdminDashboardClient({ totalRevenue, totalOrders, totalC
           <h2 className="font-playfair text-xl text-charcoal mb-6">Recent Orders</h2>
           <div className="space-y-4">
             {recentOrders.map((order) => (
-              <div key={order.id} className="flex items-center justify-between py-3 border-b border-ivory-200 last:border-0">
-                <div>
+              <div key={order.id} className="flex items-start justify-between py-3 border-b border-ivory-200 last:border-0 gap-3">
+                <div className="min-w-0">
                   <p className="font-inter text-sm font-medium text-charcoal">#{order.id.slice(-8).toUpperCase()}</p>
-                  <p className="font-inter text-xs text-mauve mt-0.5">
+                  <p className="font-inter text-xs text-mauve mt-0.5 truncate">
                     {order.user?.name || order.user?.email || "Guest"} · {order.items.reduce((s, i) => s + i.quantity, 0)} items
                   </p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                   <Badge variant={STATUS_COLORS[order.status] || "default"}>{order.status}</Badge>
                   <span className="font-inter text-sm text-charcoal">{formatPrice(order.totalAmount)}</span>
                 </div>

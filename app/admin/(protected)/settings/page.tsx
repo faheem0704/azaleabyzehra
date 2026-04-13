@@ -9,7 +9,9 @@ export default function AdminSettingsPage() {
   const [form, setForm] = useState({
     storeName: "Azalea by Zehra",
     contactEmail: "hello@azaleabyzehra.com",
-    whatsappNumber: "+92-300-0000000",
+    whatsappNumber: "+91-900-000-0000",
+    address: "123 Fashion Street, Bandra West, Mumbai, India",
+    phone: "+91 900 123 4567",
     razorpayKeyId: "",
     razorpaySecret: "",
     resendApiKey: "",
@@ -18,6 +20,13 @@ export default function AdminSettingsPage() {
     twilioPhone: "",
   });
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/config/store")
+      .then((r) => r.json())
+      .then((d) => setForm((p) => ({ ...p, ...d })))
+      .catch(() => {});
+  }, []);
 
   const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [pwSaving, setPwSaving] = useState(false);
@@ -35,9 +44,25 @@ export default function AdminSettingsPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 800));
-    toast.success("Settings saved");
-    setSaving(false);
+    try {
+      const res = await fetch("/api/config/store", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeName: form.storeName,
+          contactEmail: form.contactEmail,
+          whatsappNumber: form.whatsappNumber,
+          address: form.address,
+          phone: form.phone,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      toast.success("Store settings saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleShippingSave = async (e: React.FormEvent) => {
@@ -108,7 +133,9 @@ export default function AdminSettingsPage() {
           <h2 className="font-playfair text-xl text-charcoal">Store Information</h2>
           <Input label="Store Name" {...f("storeName")} />
           <Input label="Contact Email" type="email" {...f("contactEmail")} />
-          <Input label="WhatsApp Number" {...f("whatsappNumber")} placeholder="+92-300-0000000" />
+          <Input label="Phone Number" {...f("phone")} placeholder="+91 900 000 0000" />
+          <Input label="WhatsApp Number" {...f("whatsappNumber")} placeholder="+91-900-000-0000" />
+          <Input label="Address" {...f("address")} placeholder="Street, City, State, Country" />
         </div>
 
         {/* Payments */}

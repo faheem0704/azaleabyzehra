@@ -1,9 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { LayoutDashboard, Package, ShoppingCart, Users, Tag, Settings, LogOut, Ticket } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, Users, Tag, Settings, LogOut, Ticket, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -18,17 +19,35 @@ const NAV = [
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
-  return (
-    <aside className="fixed left-0 top-0 bottom-0 w-64 bg-charcoal-dark flex flex-col z-40">
-      <div className="p-6 border-b border-ivory/10">
-        <Link href="/" target="_blank">
+  // Close drawer on route change
+  useEffect(() => { setOpen(false); }, [pathname]);
+
+  // Prevent body scroll when drawer open
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
+  const sidebarContent = (
+    <>
+      <div className="p-6 border-b border-ivory/10 flex items-center justify-between">
+        <Link href="/" target="_blank" onClick={() => setOpen(false)}>
           <span className="font-playfair text-xl text-ivory">Azalea <span className="text-rose-gold">by Zehra</span></span>
+          <p className="font-inter text-xs text-ivory/40 mt-1">Admin Panel</p>
         </Link>
-        <p className="font-inter text-xs text-ivory/40 mt-1">Admin Panel</p>
+        {/* Close button — mobile only */}
+        <button
+          className="md:hidden text-ivory/60 hover:text-ivory transition-colors"
+          onClick={() => setOpen(false)}
+          aria-label="Close menu"
+        >
+          <X size={20} />
+        </button>
       </div>
 
-      <nav className="flex-1 py-6 px-3">
+      <nav className="flex-1 py-6 px-3 overflow-y-auto">
         {NAV.map(({ href, label, icon: Icon }) => {
           const active = href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
           return (
@@ -58,6 +77,39 @@ export default function AdminSidebar() {
           Sign Out
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Hamburger — mobile only, fixed top-left */}
+      <button
+        className="md:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-charcoal-dark flex items-center justify-center text-ivory shadow-lg"
+        onClick={() => setOpen(true)}
+        aria-label="Open menu"
+      >
+        <Menu size={20} />
+      </button>
+
+      {/* Overlay backdrop — mobile only */}
+      {open && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/60 z-40"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — drawer on mobile, fixed on desktop */}
+      <aside
+        className={cn(
+          "fixed left-0 top-0 bottom-0 w-64 bg-charcoal-dark flex flex-col z-50 transition-transform duration-300",
+          // Mobile: slide in/out
+          "md:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        )}
+      >
+        {sidebarContent}
+      </aside>
+    </>
   );
 }

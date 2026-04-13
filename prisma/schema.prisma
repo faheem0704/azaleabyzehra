@@ -232,6 +232,8 @@ model Settings {
   twilioPhone           String?
   shippingFee           Int            @default(199)
   freeShippingThreshold Int            @default(2999)
+  address               String         @default("123 Fashion Street, Bandra West, Mumbai, India")
+  phone                 String         @default("+91 900 123 4567")
 
   @@map("settings")
 }
