@@ -110,7 +110,7 @@ export default function AdminLoginPage() {
 
         {mode === "password" ? (
           <form onSubmit={handlePasswordLogin} className="space-y-5">
-            <Input label="Email Address" type="email" placeholder="admin@azaleabyzehra.com"
+            <Input label="Email Address" type="email" placeholder="your@email.com"
               value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus />
             <Input label="Password" type="password" placeholder="••••••••"
               value={password} onChange={(e) => setPassword(e.target.value)} required />

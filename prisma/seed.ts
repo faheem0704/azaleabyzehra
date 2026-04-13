@@ -144,18 +144,18 @@ async function main() {
 
   // Admin user
   await prisma.user.upsert({
-    where: { email: "admin@azaleabyzehra.com" },
-    update: {},
+    where: { email: "muhammedf0704@gmail.com" },
+    update: { role: "ADMIN" },
     create: {
-      email: "admin@azaleabyzehra.com",
+      email: "muhammedf0704@gmail.com",
       name: "Admin",
       role: "ADMIN",
     },
   });
 
   console.log("✅ Seeding complete!");
-  console.log("   Admin email: admin@azaleabyzehra.com");
-  console.log("   Use OTP login to access admin panel");
+  console.log("   Admin email: muhammedf0704@gmail.com");
+  console.log("   Use OTP or Password login to access admin panel");
 }
 
 main()
