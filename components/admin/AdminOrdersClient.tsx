@@ -7,7 +7,6 @@ import { Order } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
 import toast from "react-hot-toast";
 
 const STATUS_OPTIONS = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];

@@ -1,5 +1,6 @@
-export const dynamic = "force-dynamic";
+export const revalidate = 120;
 
+import { cache } from "react";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -10,10 +11,23 @@ interface Props {
   params: { slug: string };
 }
 
+// cache() deduplicates: generateMetadata + page both call this but it only hits DB once
+const getProduct = cache(async (slug: string) =>
+  prisma.product.findFirst({
+    where: { OR: [{ slug }, { id: slug }], isDeleted: false },
+    include: {
+      category: { include: { parent: true } },
+      reviews: {
+        include: { user: { select: { name: true, id: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      },
+    },
+  })
+);
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const product = await prisma.product.findFirst({
-    where: { OR: [{ slug: params.slug }, { id: params.slug }], isDeleted: false },
-  });
+  const product = await getProduct(params.slug);
   if (!product) return { title: "Product Not Found" };
   return {
     title: product.name,
@@ -27,18 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProductDetailPage({ params }: Props) {
-  const product = await prisma.product.findFirst({
-    where: { OR: [{ slug: params.slug }, { id: params.slug }], isDeleted: false },
-    include: {
-      category: { include: { parent: true } },
-      reviews: {
-        include: { user: { select: { name: true, id: true } } },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-      },
-    },
-  });
-
+  const product = await getProduct(params.slug);
   if (!product) notFound();
 
   const related = await prisma.product.findMany({

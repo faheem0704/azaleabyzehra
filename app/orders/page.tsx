@@ -55,7 +55,7 @@ export default async function OrdersPage() {
                       <div>
                         <p className="font-inter text-xs text-mauve uppercase tracking-widest">Date</p>
                         <p className="font-inter text-sm text-charcoal">
-                          {new Date(order.createdAt).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" })}
+                          {new Date(order.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
                         </p>
                       </div>
                       <div>
@@ -98,7 +98,7 @@ export default async function OrdersPage() {
                   {/* Address */}
                   <div className="border-t border-ivory-200 px-6 py-3">
                     <p className="font-inter text-xs text-mauve">
-                      {order.address.name} · {order.address.line1}, {order.address.city}, {order.address.state}
+                      {order.address.name} · {order.address.phone} · {order.address.line1}{order.address.line2 ? `, ${order.address.line2}` : ""}, {order.address.city}, {order.address.state} — {order.address.pincode}
                     </p>
                   </div>
                 </div>
