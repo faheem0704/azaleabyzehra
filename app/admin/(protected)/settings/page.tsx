@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import toast from "react-hot-toast";
@@ -22,12 +22,45 @@ export default function AdminSettingsPage() {
   const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [pwSaving, setPwSaving] = useState(false);
 
+  const [shipping, setShipping] = useState({ shippingFee: 199, freeShippingThreshold: 2999 });
+  const [shippingSaving, setShippingSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/config/shipping")
+      .then((r) => r.json())
+      .then((d) => setShipping(d))
+      .catch(() => {});
+  }, []);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     await new Promise((r) => setTimeout(r, 800));
     toast.success("Settings saved");
     setSaving(false);
+  };
+
+  const handleShippingSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setShippingSaving(true);
+    try {
+      const res = await fetch("/api/config/shipping", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shippingFee: Number(shipping.shippingFee),
+          freeShippingThreshold: Number(shipping.freeShippingThreshold),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setShipping(data);
+      toast.success("Shipping settings saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setShippingSaving(false);
+    }
   };
 
   const handleSetPassword = async (e: React.FormEvent) => {
@@ -101,6 +134,41 @@ export default function AdminSettingsPage() {
         </div>
 
         <Button type="submit" loading={saving} size="lg">Save Settings</Button>
+      </form>
+
+      {/* Shipping */}
+      <form onSubmit={handleShippingSave} className="space-y-8 max-w-2xl mt-12">
+        <div className="bg-white border border-ivory-200 p-6 space-y-5">
+          <div>
+            <h2 className="font-playfair text-xl text-charcoal">Shipping Charges</h2>
+            <p className="font-inter text-xs text-mauve mt-1">
+              Set the flat shipping fee and the order threshold above which shipping becomes free.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Input
+                label="Shipping Fee (₹)"
+                type="number"
+                min="0"
+                value={String(shipping.shippingFee)}
+                onChange={(e) => setShipping((p) => ({ ...p, shippingFee: Number(e.target.value) }))}
+              />
+              <p className="font-inter text-xs text-mauve mt-1">Charged on orders below the free threshold</p>
+            </div>
+            <div>
+              <Input
+                label="Free Shipping Above (₹)"
+                type="number"
+                min="0"
+                value={String(shipping.freeShippingThreshold)}
+                onChange={(e) => setShipping((p) => ({ ...p, freeShippingThreshold: Number(e.target.value) }))}
+              />
+              <p className="font-inter text-xs text-mauve mt-1">Orders at or above this get free shipping</p>
+            </div>
+          </div>
+          <Button type="submit" loading={shippingSaving}>Save Shipping Settings</Button>
+        </div>
       </form>
 
       {/* Change Password */}

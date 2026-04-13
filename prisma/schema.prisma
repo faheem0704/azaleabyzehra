@@ -167,6 +167,8 @@ model Order {
   userId         String?
   guestEmail     String?
   totalAmount    Float
+  discountAmount Float           @default(0)
+  promoCode      String?
   status         OrderStatus     @default(PENDING)
   trackingId     String?
   addressId      String
@@ -216,18 +218,36 @@ model Review {
 }
 
 model Settings {
-  id             String         @id @default(cuid())
-  storeName      String         @default("Azalea by Zehra")
-  contactEmail   String         @default("hello@azaleabyzehra.com")
-  whatsappNumber String         @default("+92-300-0000000")
-  paymentGateway PaymentGateway @default(RAZORPAY)
-  razorpayKeyId  String?
-  razorpaySecret String?
-  stripeSecretKey String?
-  resendApiKey   String?
-  twilioSid      String?
-  twilioToken    String?
-  twilioPhone    String?
+  id                    String         @id @default(cuid())
+  storeName             String         @default("Azalea by Zehra")
+  contactEmail          String         @default("hello@azaleabyzehra.com")
+  whatsappNumber        String         @default("+91-900-000-0000")
+  paymentGateway        PaymentGateway @default(RAZORPAY)
+  razorpayKeyId         String?
+  razorpaySecret        String?
+  stripeSecretKey       String?
+  resendApiKey          String?
+  twilioSid             String?
+  twilioToken           String?
+  twilioPhone           String?
+  shippingFee           Int            @default(199)
+  freeShippingThreshold Int            @default(2999)
 
   @@map("settings")
+}
+
+model PromoCode {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  discountPercent Int
+  maxDiscount     Int?
+  minOrderAmount  Int?
+  productIds      String[]
+  active          Boolean   @default(true)
+  expiresAt       DateTime?
+  usageLimit      Int?
+  usageCount      Int       @default(0)
+  createdAt       DateTime  @default(now())
+
+  @@map("promo_codes")
 }
