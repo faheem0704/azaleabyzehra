@@ -22,7 +22,7 @@ export default function AdminSidebar() {
     <aside className="fixed left-0 top-0 bottom-0 w-64 bg-charcoal-dark flex flex-col z-40">
       <div className="p-6 border-b border-ivory/10">
         <Link href="/" target="_blank">
-          <span className="font-playfair text-xl text-ivory">Zara <span className="text-rose-gold">Kurtis</span></span>
+          <span className="font-playfair text-xl text-ivory">Azalea <span className="text-rose-gold">by Zehra</span></span>
         </Link>
         <p className="font-inter text-xs text-ivory/40 mt-1">Admin Panel</p>
       </div>

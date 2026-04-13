@@ -29,18 +29,10 @@ export async function POST(req: NextRequest) {
 
     const isEmail = contact.includes("@");
 
-    try {
-      if (isEmail) {
-        await sendOTPEmail(contact, otp);
-      } else {
-        await sendOTPSMS(contact, otp);
-      }
-    } catch (deliveryError) {
-      // If email/SMS isn't configured yet, log OTP to server console so it's
-      // visible in Vercel function logs during development setup
-      console.warn(
-        `[OTP delivery failed — check Vercel logs] Contact: ${contact} | OTP: ${otp} | Error: ${deliveryError}`
-      );
+    if (isEmail) {
+      await sendOTPEmail(contact, otp);
+    } else {
+      await sendOTPSMS(contact, otp);
     }
 
     return NextResponse.json({ message: "OTP sent successfully" });

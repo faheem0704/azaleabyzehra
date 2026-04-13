@@ -6,7 +6,7 @@ import ProductsPageClient from "@/components/products/ProductsPageClient";
 
 export const metadata = {
   title: "Shop All",
-  description: "Browse our full collection of premium Pakistani ethnic wear.",
+  description: "Browse our full collection of premium Indian ethnic wear.",
 };
 
 // Products are fetched client-side via API — no DB at build time needed

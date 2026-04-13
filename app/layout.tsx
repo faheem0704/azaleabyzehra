@@ -22,11 +22,11 @@ export const metadata: Metadata = {
     template: "%s | Azalea by Zehra",
   },
   description:
-    "Premium Pakistani women's ethnic wear — Kurtis, Salwar Sets, Co-ord Sets & more. Crafted with love, draped in elegance.",
-  keywords: ["Pakistani kurtis", "ethnic wear", "women's fashion", "salwar kameez", "Pakistani fashion"],
+    "Premium Indian women's ethnic wear — Kurtis, Salwar Sets, Co-ord Sets & more. Crafted with love, draped in elegance.",
+  keywords: ["Indian kurtis", "ethnic wear", "women's fashion", "salwar kameez", "Indian fashion"],
   openGraph: {
     title: "Azalea by Zehra — Draped in Elegance",
-    description: "Premium Pakistani women's ethnic wear",
+    description: "Premium Indian women's ethnic wear",
     type: "website",
     siteName: "Azalea by Zehra",
   },

@@ -16,7 +16,7 @@ export default function BrandStory() {
           <motion.div style={{ y }} className="absolute inset-[-10%]">
             <img
               src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&q=80"
-              alt="Pakistani ethnic wear craftsmanship"
+              alt="Indian ethnic wear craftsmanship"
               className="w-full h-full object-cover"
             />
           </motion.div>
@@ -54,19 +54,19 @@ export default function BrandStory() {
             className="space-y-5 font-inter text-sm text-charcoal-light leading-relaxed"
           >
             <p>
-              Azalea by Zehra was born from a deep love for Pakistan's rich textile heritage.
+              Azalea by Zehra was born from a deep love for India's rich textile heritage.
               Every piece in our collection is a celebration of the skilled artisans who
               have perfected their craft over generations.
             </p>
             <p>
-              We work directly with master weavers and embroiderers across Lahore,
-              Multan, and Faisalabad, ensuring that each garment carries the soul of
-              authentic Pakistani craftsmanship while embracing contemporary silhouettes.
+              We work directly with master weavers and embroiderers across Jaipur,
+              Lucknow, and Surat, ensuring that each garment carries the soul of
+              authentic Indian craftsmanship while embracing contemporary silhouettes.
             </p>
             <p>
               From hand-block printed cotton for summer mornings to luxurious chiffon
-              adorned with intricate gota work for festive evenings — our collection
-              is curated for the modern Pakistani woman who honors her roots.
+              adorned with intricate zari work for festive evenings — our collection
+              is curated for the modern Indian woman who honors her roots.
             </p>
           </motion.div>
 

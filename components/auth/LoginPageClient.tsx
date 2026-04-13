@@ -74,12 +74,12 @@ export default function LoginPage() {
         />
         <div className="relative z-10 text-center px-12">
           <h1 className="font-playfair text-5xl text-ivory mb-4">
-            Zara <span className="text-rose-gold italic">Kurtis</span>
+            Azalea <span className="text-rose-gold italic">by Zehra</span>
           </h1>
           <p className="font-inter text-sm text-ivory/50 tracking-widest uppercase">Draped in Elegance</p>
           <div className="mt-12 w-24 h-px bg-rose-gold/30 mx-auto" />
           <p className="mt-8 font-inter text-xs text-ivory/30 max-w-xs leading-relaxed">
-            Pakistan's premier destination for exquisite ethnic wear
+            India's premier destination for exquisite ethnic wear
           </p>
         </div>
       </div>
@@ -89,7 +89,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <Link href="/" className="block lg:hidden mb-10">
             <span className="font-playfair text-2xl text-charcoal">
-              Zara <span className="text-rose-gold">Kurtis</span>
+              Azalea <span className="text-rose-gold">by Zehra</span>
             </span>
           </Link>
 

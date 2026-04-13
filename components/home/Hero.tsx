@@ -124,7 +124,7 @@ export default function Hero() {
           ref={subtitleRef}
           className="font-inter text-base md:text-lg text-ivory/70 max-w-xl mx-auto mb-12 leading-relaxed"
         >
-          Discover Pakistan's finest collection of Kurtis, Salwar Sets, and ethnic wear —
+          Discover India's finest collection of Kurtis, Salwar Sets, and ethnic wear —
           where tradition meets contemporary grace.
         </p>
 

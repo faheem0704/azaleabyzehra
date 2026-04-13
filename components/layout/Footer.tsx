@@ -12,7 +12,7 @@ export default function Footer() {
               Azalea <span className="text-rose-gold">by Zehra</span>
             </h3>
             <p className="text-sm font-inter leading-relaxed text-ivory/60 mb-6">
-              Draped in elegance. Crafted with love. Pakistan&apos;s premium destination for women&apos;s ethnic wear.
+              Draped in elegance. Crafted with love. India&apos;s premium destination for women&apos;s ethnic wear.
             </p>
             <div className="flex gap-4">
               {[
@@ -85,12 +85,12 @@ export default function Footer() {
             <ul className="space-y-4">
               <li className="flex items-start gap-3 text-sm font-inter text-ivory/60">
                 <MapPin size={16} className="mt-0.5 flex-shrink-0 text-rose-gold" />
-                <span>123 Fashion Street, Gulberg III, Lahore, Pakistan</span>
+                <span>123 Fashion Street, Bandra West, Mumbai, India</span>
               </li>
               <li className="flex items-center gap-3 text-sm font-inter">
                 <Phone size={16} className="flex-shrink-0 text-rose-gold" />
-                <a href="tel:+923001234567" className="text-ivory/60 hover:text-rose-gold transition-colors">
-                  +92 300 123 4567
+                <a href="tel:+919001234567" className="text-ivory/60 hover:text-rose-gold transition-colors">
+                  +91 900 123 4567
                 </a>
               </li>
               <li className="flex items-center gap-3 text-sm font-inter">
@@ -103,7 +103,7 @@ export default function Footer() {
 
             {/* WhatsApp */}
             <a
-              href="https://wa.me/923001234567"
+              href="https://wa.me/919001234567"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-6 inline-flex items-center gap-2 border border-green-500/50 text-green-400 px-4 py-2.5 text-sm font-inter hover:bg-green-500/10 transition-colors duration-200"
