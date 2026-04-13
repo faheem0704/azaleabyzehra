@@ -5,7 +5,7 @@ import AdminCustomersClient from "@/components/admin/AdminCustomersClient";
 
 export default async function AdminCustomersPage() {
   const customers = await prisma.user.findMany({
-    where: { role: "CUSTOMER" },
+    where: { role: "CUSTOMER", name: { not: "[Deleted]" } },
     include: { _count: { select: { orders: true } } },
     orderBy: { createdAt: "desc" },
     take: 100,
