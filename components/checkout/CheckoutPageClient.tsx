@@ -37,7 +37,7 @@ declare global {
 
 export default function CheckoutPageClient() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const { items, totalPrice, clearCart } = useCartStore();
 
   const [step, setStep] = useState<Step>(1);
@@ -61,19 +61,6 @@ export default function CheckoutPageClient() {
       .then((d) => { setShippingFee(d.shippingFee); setFreeShippingThreshold(d.freeShippingThreshold); })
       .catch(() => {});
   }, []);
-
-  // Auth guard — redirect to login if not signed in
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/login?callbackUrl=/checkout");
-    }
-  }, [status, router]);
-
-  if (status === "loading") {
-    return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-rose-gold border-t-transparent rounded-full animate-spin" /></div>;
-  }
-
-  if (status === "unauthenticated") return null;
 
   if (items.length === 0) {
     return (
