@@ -4,13 +4,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-function adminOnly(session: Awaited<ReturnType<typeof auth>>) {
-  return (session?.user as { role?: string })?.role !== "ADMIN";
-}
-
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await auth();
-  if (adminOnly(session)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ((session?.user as { role?: string })?.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const promoCodes = await prisma.promoCode.findMany({ orderBy: { createdAt: "desc" } });
   return NextResponse.json(promoCodes);
@@ -18,7 +16,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (adminOnly(session)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ((session?.user as { role?: string })?.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const { code, discountPercent, maxDiscount, minOrderAmount, productIds, active, expiresAt, usageLimit } = await req.json();
 

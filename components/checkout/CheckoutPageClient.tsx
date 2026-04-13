@@ -11,7 +11,6 @@ import Input from "@/components/ui/Input";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { Check, Tag, X } from "lucide-react";
-import Link from "next/link";
 
 type Step = 1 | 2 | 3;
 
