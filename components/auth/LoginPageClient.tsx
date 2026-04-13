@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import OTPInput from "@/components/auth/OTPInput";
@@ -15,7 +15,6 @@ type OtpMethod = "email" | "phone";
 type OtpStep = "contact" | "otp";
 
 export default function LoginPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
@@ -67,7 +66,7 @@ export default function LoginPage() {
       const result = await signIn("otp-credentials", { contact: contact.trim(), otp, redirect: false });
       if (result?.error) throw new Error("Invalid or expired code");
       toast.success("Welcome back!");
-      router.push(callbackUrl);
+      window.location.href = callbackUrl;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Verification failed");
     } finally {
@@ -88,7 +87,7 @@ export default function LoginPage() {
       });
       if (result?.error) throw new Error("Invalid email or password");
       toast.success("Welcome back!");
-      router.push(callbackUrl);
+      window.location.href = callbackUrl;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Sign in failed");
     } finally {

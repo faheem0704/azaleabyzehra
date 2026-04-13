@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import OTPInput from "@/components/auth/OTPInput";
@@ -15,7 +15,6 @@ type OtpMethod = "email" | "phone";
 type OtpStep = "details" | "otp";
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [mode, setMode] = useState<AuthMode>("otp");
 
   // OTP state
@@ -71,7 +70,7 @@ export default function RegisterPage() {
       });
       if (result?.error) throw new Error("Invalid or expired code");
       toast.success("Account created! Welcome to Azalea by Zehra.");
-      router.push("/");
+      window.location.href = "/";
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Verification failed");
     } finally {
@@ -101,7 +100,7 @@ export default function RegisterPage() {
       });
       if (result?.error) throw new Error("Account created but sign-in failed. Please log in.");
       toast.success("Account created! Welcome to Azalea by Zehra.");
-      router.push("/");
+      window.location.href = "/";
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Registration failed");
     } finally {
