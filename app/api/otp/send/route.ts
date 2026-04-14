@@ -48,6 +48,10 @@ export async function POST(req: NextRequest) {
       await sendOTPSMS(contact, otp);
     }
 
+    // BUG-33 (intentional): we always return success even if the contact doesn't exist
+    // in the database. This prevents account enumeration — an attacker must not be able
+    // to determine whether a given email/phone has a registered account by probing this
+    // endpoint. The OTP simply won't match anything valid if the contact is unknown.
     return NextResponse.json({ message: "OTP sent successfully" });
   } catch (error) {
     console.error("OTP send error:", error);

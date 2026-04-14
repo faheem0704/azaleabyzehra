@@ -194,6 +194,9 @@ export default function AdminProductsClient({ products: initial, categories, low
   };
 
   const handleCSVExport = () => {
+    // BUG-34 (intentional): window.location.href is correct here — file downloads
+    // require a full browser navigation to trigger the Content-Disposition header.
+    // router.push() would attempt a client-side fetch and silently discard the file.
     window.location.href = "/api/admin/csv/export";
   };
 
