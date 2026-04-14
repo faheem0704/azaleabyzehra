@@ -183,8 +183,7 @@ export default function CheckoutPageClient() {
       const order = await res.json();
       if (!res.ok) throw new Error(order.error);
       clearCart();
-      toast.success("Order placed successfully!");
-      router.push("/orders");
+      window.location.href = `/order-success?id=${order.id}`;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to place order");
     } finally {

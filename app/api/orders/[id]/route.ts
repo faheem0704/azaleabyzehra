@@ -32,6 +32,35 @@ export async function GET(
   return NextResponse.json(order);
 }
 
+// Customer cancellation — only PENDING orders, only own orders
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const order = await prisma.order.findUnique({ where: { id: params.id } });
+  if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  if (order.userId !== session.user.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (order.status !== "PENDING") return NextResponse.json({ error: "Only PENDING orders can be cancelled" }, { status: 400 });
+
+  // Restore stock
+  const items = await prisma.orderItem.findMany({ where: { orderId: params.id } });
+  await Promise.all(
+    items.map((item) =>
+      prisma.product.update({ where: { id: item.productId }, data: { stock: { increment: item.quantity } } }).catch(() => {})
+    )
+  );
+
+  const updated = await prisma.order.update({
+    where: { id: params.id },
+    data: { status: "CANCELLED" },
+  });
+
+  return NextResponse.json(updated);
+}
+
 export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
