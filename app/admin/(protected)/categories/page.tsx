@@ -35,8 +35,14 @@ export default function AdminCategoriesPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this category?")) return;
-    await fetch(`/api/categories/${id}`, { method: "DELETE" });
-    setCategories((prev) => prev.filter((c) => c.id !== id));
+    const res = await fetch(`/api/categories/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const { error } = await res.json();
+      toast.error(error || "Failed to delete category");
+      return;
+    }
+    // BUG-21: only update local state after confirmed server deletion
+    setCategories((prev) => prev.filter((c) => c.id !== id && c.parentId !== id));
     toast.success("Category deleted");
   };
 

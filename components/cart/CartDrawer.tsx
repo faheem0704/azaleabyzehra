@@ -151,11 +151,13 @@ export default function CartDrawer() {
                             <span className="w-8 text-center text-sm font-inter text-charcoal">
                               {item.quantity}
                             </span>
+                            {/* BUG-27: cap quantity at 10 — server validates real stock at checkout */}
                             <button
                               onClick={() =>
                                 updateQuantity(item.productId, item.size, item.color, item.quantity + 1)
                               }
-                              className="w-7 h-7 flex items-center justify-center text-charcoal hover:text-rose-gold transition-colors"
+                              disabled={item.quantity >= 10}
+                              className="w-7 h-7 flex items-center justify-center text-charcoal hover:text-rose-gold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                             >
                               <Plus size={12} />
                             </button>

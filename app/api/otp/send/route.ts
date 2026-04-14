@@ -9,11 +9,17 @@ import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
-    const { contact } = await req.json();
+    const { contact: rawContact } = await req.json();
 
-    if (!contact) {
+    if (!rawContact) {
       return NextResponse.json({ error: "Contact is required" }, { status: 400 });
     }
+
+    // BUG-20: normalise email to lowercase so OTP records match auth lookups
+    const isEmail = (rawContact as string).includes("@");
+    const contact = isEmail
+      ? (rawContact as string).trim().toLowerCase()
+      : (rawContact as string).trim();
 
     // Max 3 OTPs per contact per 10 minutes
     if (!checkRateLimit(`otp:${contact}`, 3, 10 * 60 * 1000)) {
@@ -35,8 +41,6 @@ export async function POST(req: NextRequest) {
     await prisma.oTPRecord.create({
       data: { contact, otp, expiresAt },
     });
-
-    const isEmail = contact.includes("@");
 
     if (isEmail) {
       await sendOTPEmail(contact, otp);

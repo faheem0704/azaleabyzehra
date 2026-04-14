@@ -15,9 +15,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.contact || !credentials?.password) return null;
 
-        const contact = credentials.contact as string;
+        const rawContact = (credentials.contact as string).trim();
         const password = credentials.password as string;
-        const isEmail = contact.includes("@");
+        const isEmail = rawContact.includes("@");
+        // BUG-20: normalise email to lowercase so login is case-insensitive
+        const contact = isEmail ? rawContact.toLowerCase() : rawContact;
 
         const user = await prisma.user.findFirst({
           where: isEmail ? { email: contact } : { phone: contact },
@@ -40,8 +42,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.contact || !credentials?.otp) return null;
 
-        const contact = credentials.contact as string;
+        const rawContact = (credentials.contact as string).trim();
         const otp = credentials.otp as string;
+        const isEmail = rawContact.includes("@");
+        // BUG-20: normalise email to lowercase for consistent lookup
+        const contact = isEmail ? rawContact.toLowerCase() : rawContact;
 
         // Find valid OTP record
         const otpRecord = await prisma.oTPRecord.findFirst({
@@ -62,7 +67,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
 
         // Find existing user only (otp-credentials is for login, not signup)
-        const isEmail = contact.includes("@");
         const user = await prisma.user.findFirst({
           where: isEmail ? { email: contact } : { phone: contact },
         });

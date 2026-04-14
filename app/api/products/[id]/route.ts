@@ -35,12 +35,23 @@ export async function PUT(
   }
 
   const body = await req.json();
-  const product = await prisma.product.update({
-    where: { id: params.id },
-    data: { ...body, slug: body.name ? slugify(body.name) : undefined },
-  });
 
-  return NextResponse.json(product);
+  // BUG-24: catch slug collision on rename (same P2002 issue as POST)
+  try {
+    const product = await prisma.product.update({
+      where: { id: params.id },
+      data: { ...body, slug: body.name ? slugify(body.name) : undefined },
+    });
+    return NextResponse.json(product);
+  } catch (err: any) {
+    if (err?.code === "P2002") {
+      return NextResponse.json(
+        { error: "A product with this name already exists. Please use a different name." },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
 }
 
 export async function DELETE(

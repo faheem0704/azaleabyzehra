@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Edit2, Trash2, X, Upload, Star, Sparkles, Download, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
 import { Product, Category, ProductVariant } from "@/types";
@@ -12,6 +13,7 @@ import toast from "react-hot-toast";
 interface Props {
   products: Product[];
   categories: Category[];
+  lowStockThreshold: number;
 }
 
 const EMPTY_FORM = {
@@ -25,7 +27,8 @@ type ImageEntry = { url: string; alt: string };
 // Build variant map key
 const vkey = (size: string, color: string) => `${size}||${color}`;
 
-export default function AdminProductsClient({ products: initial, categories }: Props) {
+export default function AdminProductsClient({ products: initial, categories, lowStockThreshold }: Props) {
+  const router = useRouter();
   const [products, setProducts] = useState(initial);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -179,7 +182,13 @@ export default function AdminProductsClient({ products: initial, categories }: P
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this product?")) return;
-    await fetch(`/api/products/${id}`, { method: "DELETE" });
+    // BUG-30: check response before updating local state
+    const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error || "Failed to delete product");
+      return;
+    }
     setProducts((prev) => prev.filter((p) => p.id !== id));
     toast.success("Product deleted");
   };
@@ -201,7 +210,8 @@ export default function AdminProductsClient({ products: initial, categories }: P
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success(`Imported: ${data.created} created, ${data.updated} updated${data.errors.length > 0 ? ` (${data.errors.length} errors)` : ""}`);
-      window.location.reload();
+      // BUG-29: use router.refresh() instead of window.location.reload() to stay in Next.js
+      router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Import failed");
     } finally {
@@ -209,12 +219,12 @@ export default function AdminProductsClient({ products: initial, categories }: P
     }
   };
 
-  // Low stock: total variant stock or product.stock < 5
+  // BUG-25: use settings lowStockThreshold instead of hardcoded 5
   const isLowStock = (p: Product) => {
     if (p.variants && p.variants.length > 0) {
-      return p.variants.some((v) => v.stock <= 5);
+      return p.variants.some((v) => v.stock <= lowStockThreshold);
     }
-    return p.stock <= 5 && p.stock >= 0;
+    return p.stock <= lowStockThreshold && p.stock >= 0;
   };
 
   return (

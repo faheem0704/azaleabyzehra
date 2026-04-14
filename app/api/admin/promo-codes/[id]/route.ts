@@ -11,9 +11,20 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const data = await req.json();
+
+  // BUG-31: allow full promo code updates, not just toggling active
+  const updateData: Record<string, unknown> = {};
+  if (data.active !== undefined) updateData.active = data.active;
+  if (data.code !== undefined) updateData.code = (data.code as string).toUpperCase().trim();
+  if (data.discountType !== undefined) updateData.discountType = data.discountType;
+  if (data.discountValue !== undefined) updateData.discountValue = Number(data.discountValue);
+  if (data.minOrderAmount !== undefined) updateData.minOrderAmount = data.minOrderAmount != null ? Number(data.minOrderAmount) : null;
+  if (data.maxUses !== undefined) updateData.maxUses = data.maxUses != null ? Number(data.maxUses) : null;
+  if (data.expiresAt !== undefined) updateData.expiresAt = data.expiresAt ? new Date(data.expiresAt) : null;
+
   const promo = await prisma.promoCode.update({
     where: { id: params.id },
-    data: { active: data.active },
+    data: updateData,
   });
   return NextResponse.json(promo);
 }

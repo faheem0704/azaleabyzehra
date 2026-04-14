@@ -30,13 +30,13 @@ export async function PUT(
     variants: { size: string; color: string; stock: number; sku?: string }[];
   };
 
-  // Delete variants no longer in the list, upsert the rest
-  const keys = variants.map((v) => `${v.size}||${v.color}`);
+  // BUG-19: was NOT { AND: [...] } which is always TRUE (deletes everything).
+  // Correct logic: delete variants whose (size, color) pair is NOT in the new list.
   await prisma.productVariant.deleteMany({
     where: {
       productId: params.id,
       NOT: {
-        AND: variants.map((v) => ({ size: v.size, color: v.color })),
+        OR: variants.map((v) => ({ size: v.size, color: v.color })),
       },
     },
   });
@@ -54,9 +54,6 @@ export async function PUT(
   // Sync product.stock to total of all variants
   const total = variants.reduce((s, v) => s + v.stock, 0);
   await prisma.product.update({ where: { id: params.id }, data: { stock: total } });
-
-  // Suppress unused variable warning
-  void keys;
 
   return NextResponse.json(upserted);
 }

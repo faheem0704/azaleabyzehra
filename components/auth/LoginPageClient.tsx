@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import OTPInput from "@/components/auth/OTPInput";
@@ -13,6 +13,7 @@ import toast from "react-hot-toast";
 type Step = "login" | "forgot_contact" | "forgot_otp";
 
 export default function LoginPageClient() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
@@ -40,7 +41,10 @@ export default function LoginPageClient() {
       });
       if (result?.error) throw new Error("Incorrect email/phone or password");
       toast.success("Welcome back!");
-      window.location.href = callbackUrl;
+      // BUG-23: router.refresh() re-validates the session server-side,
+      // then router.push() navigates without a full page reload.
+      router.refresh();
+      router.push(callbackUrl);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Sign in failed");
     } finally {
@@ -80,7 +84,8 @@ export default function LoginPageClient() {
       });
       if (result?.error) throw new Error("Invalid or expired code");
       toast.success("Welcome back!");
-      window.location.href = callbackUrl;
+      router.refresh();
+      router.push(callbackUrl);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Verification failed");
     } finally {
