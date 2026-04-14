@@ -17,18 +17,26 @@ export default function CartSync() {
   const { items: localWishItems, setItems: setWishlistItems } = useWishlistStore();
   const synced = useRef(false);
 
+  // BUG-13: reset sync flag when the user signs out so the next sign-in
+  // (same browser tab, different account) triggers a fresh sync.
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      synced.current = false;
+    }
+  }, [status]);
+
   useEffect(() => {
     if (status !== "authenticated" || synced.current) return;
     synced.current = true;
 
     const syncAll = async () => {
       try {
-        // --- Cart ---
+        // ── Cart ────────────────────────────────────────────────────────────
         const cartRes = await fetch("/api/cart");
         if (cartRes.ok) {
           const { items: serverItems } = await cartRes.json();
 
-          // Merge: start with local items, append server items not already present
+          // Merge: start with local items, append server-only items
           const merged: CartItem[] = [...localCartItems];
           for (const si of serverItems) {
             const exists = merged.find(
@@ -42,19 +50,35 @@ export default function CartSync() {
                 quantity: si.quantity,
                 size: si.size,
                 color: si.color,
-                price: si.product.price,
+                // BUG-17: use the stored price if available, fall back to product.price
+                price: si.price > 0 ? si.price : si.product.price,
               });
             }
           }
 
-          setCartItems(merged);
+          // BUG-16: validate all productIds in the merged cart against the
+          // server to strip out soft-deleted products that may linger in
+          // localStorage from a previous session.
+          const allIds = Array.from(new Set(merged.map((i) => i.productId)));
+          let validIdArray: string[] = allIds; // default: trust all
+          if (allIds.length > 0) {
+            const batchRes = await fetch(`/api/products/batch?ids=${allIds.join(",")}`).catch(() => null);
+            if (batchRes?.ok) {
+              const validProducts = (await batchRes.json()) as { id: string }[];
+              validIdArray = validProducts.map((p) => p.id);
+            }
+          }
+          const validIdSet = new Set(validIdArray);
+          const cleaned = merged.filter((i) => validIdSet.has(i.productId));
 
-          // Push merged state back to server
+          setCartItems(cleaned);
+
+          // Push cleaned state back to server
           await fetch("/api/cart", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              items: merged.map((i) => ({
+              items: cleaned.map((i) => ({
                 productId: i.productId,
                 quantity: i.quantity,
                 size: i.size,
@@ -65,20 +89,38 @@ export default function CartSync() {
           });
         }
 
-        // --- Wishlist ---
+        // ── Wishlist ────────────────────────────────────────────────────────
         const wishRes = await fetch("/api/wishlist");
         if (wishRes.ok) {
-          const { productIds: serverIds, products: serverProducts } = await wishRes.json();
+          const { products: serverProducts } = await wishRes.json();
 
-          // Merge: combine local + server product IDs (dedup)
+          // BUG-16: wishlist GET returns products already filtered by
+          // isDeleted: false, so use the products array (not productIds)
+          // as the source of truth for valid server wishlist entries.
+          const validServerIds = (serverProducts ?? []).map((p: { id: string }) => p.id);
+
           const localIds = localWishItems.map((i) => i.productId);
-          const mergedIds = Array.from(new Set([...localIds, ...(serverIds ?? [])]));
+          const mergedIds = Array.from(new Set([...localIds, ...validServerIds]));
 
-          // Build merged wishlist items
-          const productMap = new Map(
-            (serverProducts ?? []).map((p: any) => [p.id, p])
+          // BUG-16: validate local-only wishlist items against the batch API
+          const localOnlyIds = mergedIds.filter((id) => !validServerIds.includes(id));
+          let validLocalIds: Set<string> = new Set(localOnlyIds);
+          if (localOnlyIds.length > 0) {
+            const batchRes = await fetch(`/api/products/batch?ids=${localOnlyIds.join(",")}`).catch(() => null);
+            if (batchRes?.ok) {
+              const valid = (await batchRes.json()) as { id: string }[];
+              validLocalIds = new Set(valid.map((p) => p.id));
+            }
+          }
+
+          const cleanedIds = mergedIds.filter(
+            (id) => validServerIds.includes(id) || validLocalIds.has(id)
           );
-          const mergedItems: WishlistItem[] = mergedIds.map((id) => {
+
+          const productMap = new Map(
+            (serverProducts ?? []).map((p: WishlistItem["product"]) => [p!.id, p])
+          );
+          const mergedItems: WishlistItem[] = cleanedIds.map((id) => {
             const existing = localWishItems.find((i) => i.productId === id);
             if (existing) return existing;
             const serverProduct = productMap.get(id) as WishlistItem["product"];
@@ -87,11 +129,10 @@ export default function CartSync() {
 
           setWishlistItems(mergedItems);
 
-          // Push merged IDs back to server
           await fetch("/api/wishlist", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ productIds: mergedIds }),
+            body: JSON.stringify({ productIds: cleanedIds }),
           });
         }
       } catch {
@@ -118,7 +159,7 @@ export default function CartSync() {
             quantity: i.quantity,
             size: i.size,
             color: i.color,
-            price: i.price,
+            price: i.price, // BUG-17: persist price
           })),
         }),
       }).catch(() => {});

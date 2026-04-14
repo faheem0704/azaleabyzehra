@@ -29,6 +29,15 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { storeName, contactEmail, whatsappNumber, address, phone, lowStockThreshold, adminEmail } = await req.json();
+
+  // BUG-18: lowStockThreshold must be a positive integer
+  if (lowStockThreshold !== undefined) {
+    const threshold = Number(lowStockThreshold);
+    if (!Number.isInteger(threshold) || threshold < 1) {
+      return NextResponse.json({ error: "Low stock threshold must be a whole number of at least 1" }, { status: 400 });
+    }
+  }
+
   const s = await getSettings();
   const updated = await prisma.settings.update({
     where: { id: s.id },

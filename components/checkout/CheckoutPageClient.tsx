@@ -134,21 +134,35 @@ export default function CheckoutPageClient() {
       const loaded = await loadRazorpay();
       if (!loaded) throw new Error("Payment service unavailable");
 
+      // BUG-03: pass items + promoCode so the server calculates the total —
+      // the returned `amount` is authoritative and matches what /api/orders
+      // will also calculate, eliminating any charge/order mismatch.
       const orderRes = await fetch("/api/payment/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: total }),
+        body: JSON.stringify({
+          items: items.map((i) => ({ productId: i.productId, price: i.price, quantity: i.quantity })),
+          promoCode: appliedPromo?.code ?? null,
+        }),
       });
-      const { orderId, keyId } = await orderRes.json();
+      if (!orderRes.ok) {
+        const { error } = await orderRes.json();
+        throw new Error(error || "Failed to create payment order");
+      }
+      const { orderId, amount: serverAmount, keyId } = await orderRes.json();
 
       const options = {
         key: keyId,
-        amount: total * 100,
+        amount: Math.round(serverAmount * 100), // paise — server-calculated
         currency: "INR",
         name: "Azalea by Zehra",
         description: `${items.length} item(s)`,
         order_id: orderId,
-        handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
+        handler: async (response: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) => {
           const verifyRes = await fetch("/api/payment/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -186,6 +200,7 @@ export default function CheckoutPageClient() {
             size: i.size, color: i.color, price: i.price,
           })),
           address,
+          selectedAddressId, // BUG-04: send saved address ID to avoid duplicate creation
           paymentId,
           paymentGateway: gateway,
           promoCode: appliedPromo?.code,
@@ -194,7 +209,7 @@ export default function CheckoutPageClient() {
       const order = await res.json();
       if (!res.ok) throw new Error(order.error);
       clearCart();
-      window.location.href = `/order-success?id=${order.id}`;
+      router.push(`/order-success?id=${order.id}`); // BUG-10: use router.push, not window.location.href
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to place order");
     } finally {

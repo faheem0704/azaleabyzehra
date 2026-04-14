@@ -5,8 +5,9 @@ export async function GET(req: NextRequest) {
   const ids = req.nextUrl.searchParams.get("ids")?.split(",").filter(Boolean) || [];
   if (ids.length === 0) return NextResponse.json([]);
 
+  // BUG-16: raised limit from 8 → 50 to support full cart validation
   const products = await prisma.product.findMany({
-    where: { id: { in: ids.slice(0, 8) }, isDeleted: false },
+    where: { id: { in: ids.slice(0, 50) }, isDeleted: false },
     include: { category: true },
   });
 

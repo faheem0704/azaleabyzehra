@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-// GET: return the user's saved cart items
+// GET: return the user's saved cart items (BUG-16: excludes soft-deleted products)
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ items: [] });
@@ -13,8 +13,15 @@ export async function GET() {
     where: { userId: session.user.id },
     include: {
       items: {
+        // BUG-16: filter out items whose product has been soft-deleted
+        where: { product: { isDeleted: false } },
         include: {
-          product: { select: { id: true, name: true, images: true, price: true, slug: true, sizes: true, colors: true, stock: true } },
+          product: {
+            select: {
+              id: true, name: true, images: true, price: true,
+              slug: true, sizes: true, colors: true, stock: true,
+            },
+          },
         },
       },
     },
@@ -32,14 +39,12 @@ export async function PUT(req: NextRequest) {
     items: { productId: string; quantity: number; size: string; color: string; price: number }[];
   };
 
-  // Upsert cart record
   const cart = await prisma.cart.upsert({
     where: { userId: session.user.id },
     create: { userId: session.user.id },
     update: {},
   });
 
-  // Delete existing items and re-create (simplest merge strategy)
   await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
   if (items.length > 0) {
@@ -50,6 +55,7 @@ export async function PUT(req: NextRequest) {
         quantity: i.quantity,
         size: i.size,
         color: i.color,
+        price: i.price ?? 0, // BUG-17: persist price so it isn't lost on cart reload
       })),
       skipDuplicates: true,
     });

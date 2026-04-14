@@ -59,7 +59,12 @@ export async function POST(req: NextRequest) {
       const price = parseFloat(cols[idx("price")] || "0");
       const compareAtPrice = cols[idx("compareAtPrice")] ? parseFloat(cols[idx("compareAtPrice")]) : null;
       const catSlug = cols[idx("category_slug")] || "";
-      const categoryId = catMap.get(catSlug) ?? categories[0]?.id ?? "";
+      // BUG-12: unknown category_slug is a row error, not a silent fallback
+      if (!catSlug || !catMap.has(catSlug)) {
+        errors.push(`Row ${i + 1}: category_slug "${catSlug}" does not match any existing category`);
+        continue;
+      }
+      const categoryId = catMap.get(catSlug)!;
       const sizes = cols[idx("sizes")] ? cols[idx("sizes")].split(";").filter(Boolean) : [];
       const colors = cols[idx("colors")] ? cols[idx("colors")].split(";").filter(Boolean) : [];
       const fabric = cols[idx("fabric")] || null;
@@ -70,8 +75,8 @@ export async function POST(req: NextRequest) {
       const imageAlts = cols[idx("image_alts")] ? cols[idx("image_alts")].split(";").filter(Boolean) : [];
       const variantsRaw = cols[idx("variants_size_color_stock_sku")] || "";
 
-      if (!name || !price || !categoryId) {
-        errors.push(`Row ${i + 1}: missing name, price, or category`);
+      if (!name || !price) {
+        errors.push(`Row ${i + 1}: missing name or price`);
         continue;
       }
 

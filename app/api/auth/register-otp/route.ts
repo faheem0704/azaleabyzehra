@@ -30,30 +30,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid or expired verification code" }, { status: 400 });
     }
 
-    // Check user doesn't already exist
+    // Check duplicate before entering the transaction (fast-fail)
     const isEmail = contact.includes("@");
     const existing = await prisma.user.findFirst({
       where: isEmail ? { email: contact.trim() } : { phone: contact.trim() },
     });
-
     if (existing) {
       return NextResponse.json({ error: "An account with this contact already exists" }, { status: 409 });
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // Mark OTP used and create user atomically
-    await prisma.oTPRecord.update({
-      where: { id: otpRecord.id },
-      data: { used: true },
-    });
-
-    await prisma.user.create({
-      data: {
-        name: name.trim(),
-        ...(isEmail ? { email: contact.trim() } : { phone: contact.trim() }),
-        passwordHash,
-      },
+    // BUG-09: mark OTP used and create user atomically — if user creation
+    // fails (e.g. concurrent registration race), the OTP is NOT consumed.
+    await prisma.$transaction(async (tx) => {
+      await tx.oTPRecord.update({
+        where: { id: otpRecord.id },
+        data: { used: true },
+      });
+      await tx.user.create({
+        data: {
+          name: name.trim(),
+          ...(isEmail ? { email: contact.trim() } : { phone: contact.trim() }),
+          passwordHash,
+        },
+      });
     });
 
     return NextResponse.json({ message: "Account created successfully" });

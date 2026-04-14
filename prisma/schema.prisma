@@ -142,6 +142,7 @@ model CartItem {
   quantity  Int    @default(1)
   size      String
   color     String
+  price     Float  @default(0)
 
   cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id])

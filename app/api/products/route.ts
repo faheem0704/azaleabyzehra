@@ -40,17 +40,9 @@ export async function GET(req: NextRequest) {
     };
   }
 
-  if (colors?.length) {
-    where.colors = { hasSome: colors };
-  }
-
-  if (sizes?.length) {
-    where.sizes = { hasSome: sizes };
-  }
-
-  if (fabric) {
-    where.fabric = { equals: fabric, mode: "insensitive" };
-  }
+  if (colors?.length) where.colors = { hasSome: colors };
+  if (sizes?.length) where.sizes = { hasSome: sizes };
+  if (fabric) where.fabric = { equals: fabric, mode: "insensitive" };
 
   if (search) {
     where.OR = [
@@ -62,13 +54,14 @@ export async function GET(req: NextRequest) {
   if (featured) where.featured = true;
   if (isNewArrival) where.isNewArrival = true;
 
-  const orderBy: Record<string, string> =
+  // BUG-14: popular sort now orders by actual order-item count descending
+  const orderBy: Record<string, unknown> =
     sort === "price_asc"
       ? { price: "asc" }
       : sort === "price_desc"
       ? { price: "desc" }
       : sort === "popular"
-      ? { createdAt: "desc" }
+      ? { orderItems: { _count: "desc" } }
       : { createdAt: "desc" };
 
   const [total, products] = await Promise.all([
@@ -98,12 +91,24 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const product = await prisma.product.create({
-    data: {
-      ...body,
-      slug: slugify(body.name),
-    },
-  });
 
-  return NextResponse.json(product, { status: 201 });
+  // BUG-08: generate a unique slug, appending a suffix on collision
+  let slug = slugify(body.name);
+  const collision = await prisma.product.findUnique({ where: { slug } });
+  if (collision) {
+    slug = `${slug}-${Date.now()}`;
+  }
+
+  try {
+    const product = await prisma.product.create({
+      data: { ...body, slug },
+    });
+    return NextResponse.json(product, { status: 201 });
+  } catch (err: unknown) {
+    const e = err as { code?: string };
+    if (e?.code === "P2002") {
+      return NextResponse.json({ error: "A product with this name already exists" }, { status: 409 });
+    }
+    throw err;
+  }
 }
