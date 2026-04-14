@@ -10,7 +10,8 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { Check, Tag, X } from "lucide-react";
+import { Check, Tag, X, MapPin } from "lucide-react";
+import { Address } from "@/types";
 
 type Step = 1 | 2 | 3;
 
@@ -37,6 +38,26 @@ export default function CheckoutPageClient() {
   const [address, setAddress] = useState<AddressForm>({
     name: "", phone: "", line1: "", line2: "", city: "", state: "", pincode: "",
   });
+
+  // Saved addresses
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    fetch("/api/account/addresses")
+      .then((r) => r.json())
+      .then((data: Address[]) => {
+        if (!Array.isArray(data)) return;
+        setSavedAddresses(data);
+        const def = data.find((a) => a.isDefault) ?? data[0];
+        if (def) {
+          setSelectedAddressId(def.id);
+          setAddress({ name: def.name, phone: def.phone, line1: def.line1, line2: def.line2 ?? "", city: def.city, state: def.state, pincode: def.pincode });
+        }
+      })
+      .catch(() => {});
+  }, [session]);
 
   // Shipping
   const [shippingFee, setShippingFee] = useState(199);
@@ -218,6 +239,49 @@ export default function CheckoutPageClient() {
               {step === 1 && (
                 <motion.div key="address" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
                   <h2 className="font-playfair text-2xl text-charcoal">Delivery Address</h2>
+
+                  {/* Saved addresses */}
+                  {savedAddresses.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="font-inter text-xs tracking-widest uppercase text-charcoal-light">Saved Addresses</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {savedAddresses.map((a) => (
+                          <button
+                            key={a.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedAddressId(a.id);
+                              setAddress({ name: a.name, phone: a.phone, line1: a.line1, line2: a.line2 ?? "", city: a.city, state: a.state, pincode: a.pincode });
+                            }}
+                            className={`text-left border p-4 transition-all duration-200 ${selectedAddressId === a.id ? "border-rose-gold bg-rose-gold/5" : "border-ivory-200 hover:border-charcoal-light"}`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-2">
+                                <MapPin size={14} className={`mt-0.5 flex-shrink-0 ${selectedAddressId === a.id ? "text-rose-gold" : "text-mauve"}`} />
+                                <div>
+                                  <p className="font-inter text-sm font-medium text-charcoal">{a.name}</p>
+                                  <p className="font-inter text-xs text-mauve mt-0.5">{a.phone}</p>
+                                  <p className="font-inter text-xs text-charcoal-light mt-1 leading-relaxed">
+                                    {a.line1}{a.line2 ? `, ${a.line2}` : ""}, {a.city}, {a.state} {a.pincode}
+                                  </p>
+                                </div>
+                              </div>
+                              {selectedAddressId === a.id && (
+                                <Check size={14} className="text-rose-gold flex-shrink-0 mt-0.5" />
+                              )}
+                            </div>
+                            {a.isDefault && (
+                              <span className="mt-2 inline-block font-inter text-[10px] tracking-widest uppercase text-rose-gold border border-rose-gold/40 px-2 py-0.5">
+                                Default
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="font-inter text-xs text-mauve">Or enter a new address below</p>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Input label="Full Name *" value={address.name} onChange={(e) => setAddress(p => ({ ...p, name: e.target.value }))} required placeholder="Ayesha Khan" />
                     <Input label="Phone Number *" value={address.phone} onChange={(e) => setAddress(p => ({ ...p, phone: e.target.value }))} required placeholder="+91 900 000 0000" />
