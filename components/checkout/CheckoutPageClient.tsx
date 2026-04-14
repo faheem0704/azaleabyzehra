@@ -19,14 +19,6 @@ interface AddressForm {
   line2: string; city: string; state: string; pincode: string;
 }
 
-interface PromoResult {
-  code: string;
-  discountPercent: number;
-  maxDiscount: number | null;
-  discountAmount: number;
-  message: string;
-}
-
 const STEPS = ["Address", "Payment", "Review"];
 
 declare global {
@@ -38,7 +30,7 @@ declare global {
 export default function CheckoutPageClient() {
   const router = useRouter();
   const { data: session } = useSession();
-  const { items, totalPrice, clearCart } = useCartStore();
+  const { items, totalPrice, clearCart, appliedPromo, setPromo } = useCartStore();
 
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
@@ -50,10 +42,9 @@ export default function CheckoutPageClient() {
   const [shippingFee, setShippingFee] = useState(199);
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(2999);
 
-  // Promo
+  // Promo — driven by cart store (shared with CartDrawer)
   const [promoInput, setPromoInput] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
-  const [appliedPromo, setAppliedPromo] = useState<PromoResult | null>(null);
 
   useEffect(() => {
     fetch("/api/config/shipping")
@@ -93,7 +84,8 @@ export default function CheckoutPageClient() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setAppliedPromo(data);
+      setPromo(data);
+      setPromoInput("");
       toast.success(`Promo applied: ${data.message}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Invalid promo code");
@@ -102,7 +94,7 @@ export default function CheckoutPageClient() {
     }
   };
 
-  const removePromo = () => { setAppliedPromo(null); setPromoInput(""); };
+  const removePromo = () => { setPromo(null); setPromoInput(""); };
 
   const loadRazorpay = (): Promise<boolean> => {
     return new Promise((resolve) => {

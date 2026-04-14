@@ -10,21 +10,12 @@ import { formatPrice } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 import toast from "react-hot-toast";
 
-interface PromoResult {
-  code: string;
-  discountPercent: number;
-  maxDiscount: number | null;
-  discountAmount: number;
-  message: string;
-}
-
 export default function CartDrawer() {
-  const { items, isOpen, closeCart, removeItem, updateQuantity, totalPrice, totalItems } =
+  const { items, isOpen, closeCart, removeItem, updateQuantity, totalPrice, totalItems, appliedPromo, setPromo } =
     useCartStore();
 
   const [promoInput, setPromoInput] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
-  const [appliedPromo, setAppliedPromo] = useState<PromoResult | null>(null);
 
   const subtotal = totalPrice();
   const discount = appliedPromo?.discountAmount ?? 0;
@@ -44,7 +35,8 @@ export default function CartDrawer() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setAppliedPromo(data);
+      setPromo(data);
+      setPromoInput("");
       toast.success(`Promo applied: ${data.message}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Invalid promo code");
@@ -53,7 +45,7 @@ export default function CartDrawer() {
     }
   };
 
-  const removePromo = () => { setAppliedPromo(null); setPromoInput(""); };
+  const removePromo = () => { setPromo(null); setPromoInput(""); };
 
   return (
     <AnimatePresence>

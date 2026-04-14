@@ -7,6 +7,9 @@ export const useCartStore = create<CartStore>()(
     (set, get) => ({
       items: [],
       isOpen: false,
+      appliedPromo: null,
+
+      setPromo: (promo) => set({ appliedPromo: promo }),
 
       addItem: (item) => {
         const items = get().items;
@@ -57,7 +60,7 @@ export const useCartStore = create<CartStore>()(
         });
       },
 
-      clearCart: () => set({ items: [] }),
+      clearCart: () => set({ items: [], appliedPromo: null }),
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
 
@@ -67,7 +70,7 @@ export const useCartStore = create<CartStore>()(
     }),
     {
       name: "azalea-by-zehra-cart",
-      partialize: (state) => ({ items: state.items }),
+      partialize: (state) => ({ items: state.items, appliedPromo: state.appliedPromo }),
     }
   )
 );

@@ -121,16 +121,26 @@ export interface Review {
   createdAt: Date;
 }
 
+export interface AppliedPromo {
+  code: string;
+  discountPercent: number;
+  maxDiscount: number | null;
+  discountAmount: number;
+  message: string;
+}
+
 // Store types
 export interface CartStore {
   items: CartItem[];
   isOpen: boolean;
+  appliedPromo: AppliedPromo | null;
   addItem: (item: Omit<CartItem, "id">) => void;
   removeItem: (productId: string, size: string, color: string) => void;
   updateQuantity: (productId: string, size: string, color: string, quantity: number) => void;
   clearCart: () => void;
   openCart: () => void;
   closeCart: () => void;
+  setPromo: (promo: AppliedPromo | null) => void;
   totalItems: () => number;
   totalPrice: () => number;
 }
