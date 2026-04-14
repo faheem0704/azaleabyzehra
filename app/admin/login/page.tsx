@@ -72,7 +72,7 @@ export default function AdminLoginPage() {
     setLoading(true);
     try {
       const result = await signIn("password-credentials", {
-        email: email.trim().toLowerCase(),
+        contact: email.trim().toLowerCase(),
         password,
         redirect: false,
       });
