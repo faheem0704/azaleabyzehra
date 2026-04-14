@@ -11,12 +11,15 @@ function createPrismaClient() {
   const connectionString =
     process.env.DATABASE_URL || "postgresql://localhost:5432/azalea_by_zehra";
 
+  // On Vercel each serverless function instance gets its own pool.
+  // Keeping max low prevents exhausting the cloud DB's connection limit.
+  const isServerless = process.env.VERCEL === "1";
   const pool =
     globalForPrisma.pool ??
     new Pool({
       connectionString,
-      max: 10,
-      idleTimeoutMillis: 30000,
+      max: isServerless ? 3 : 10,
+      idleTimeoutMillis: isServerless ? 10000 : 30000,
       connectionTimeoutMillis: 5000,
       allowExitOnIdle: false,
     });

@@ -48,8 +48,14 @@ export default async function ProductDetailPage({ params }: Props) {
   const related = await prisma.product.findMany({
     where: { categoryId: product.categoryId, isDeleted: false, NOT: { id: product.id } },
     take: 4,
-    include: { category: true },
     orderBy: { createdAt: "desc" },
+    select: {
+      id: true, name: true, slug: true, price: true, compareAtPrice: true,
+      images: true, imageAlts: true, stock: true, featured: true, isNewArrival: true,
+      categoryId: true, sizes: true, colors: true, fabric: true,
+      description: true, createdAt: true,
+      category: { select: { id: true, name: true, slug: true, parentId: true } },
+    },
   });
 
   return (

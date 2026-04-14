@@ -7,7 +7,7 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair",
   display: "swap",
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "600", "700"], // dropped 500 and 800 — not used in the design
 });
 
 const inter = Inter({

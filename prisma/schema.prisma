@@ -105,6 +105,12 @@ model Product {
   @@index([categoryId])
   @@index([featured])
   @@index([isNewArrival])
+  // Composite indexes for the most common query patterns
+  @@index([isDeleted, createdAt])      // newest sort (default)
+  @@index([isDeleted, featured])       // homepage featured section
+  @@index([isDeleted, isNewArrival])   // homepage new arrivals
+  @@index([isDeleted, price])          // price sort
+  @@index([categoryId, isDeleted])     // category filter page
   @@map("products")
 }
 
@@ -148,6 +154,7 @@ model CartItem {
   product   Product @relation(fields: [productId], references: [id])
 
   @@unique([cartId, productId, size, color])
+  @@index([cartId])  // join from cart lookup
   @@map("cart_items")
 }
 
@@ -202,6 +209,9 @@ model Order {
 
   @@index([userId])
   @@index([status])
+  @@index([createdAt])                 // order-by date in admin/reports
+  @@index([paymentStatus])             // revenue aggregate filter
+  @@index([userId, createdAt])         // customer order history
   @@map("orders")
 }
 
@@ -217,6 +227,8 @@ model OrderItem {
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
 
+  @@index([orderId])    // join from order
+  @@index([productId])  // popular product reports
   @@map("order_items")
 }
 
@@ -232,6 +244,7 @@ model Review {
   product Product @relation(fields: [productId], references: [id])
 
   @@unique([userId, productId])
+  @@index([productId])  // product detail reviews query
   @@map("reviews")
 }
 
@@ -279,5 +292,6 @@ model PromoCode {
   usageCount      Int       @default(0)
   createdAt       DateTime  @default(now())
 
+  @@index([active, expiresAt])  // promo validation: active + not expired
   @@map("promo_codes")
 }

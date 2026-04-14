@@ -1,4 +1,5 @@
-export const dynamic = "force-dynamic";
+// Shipping config changes rarely — cache GET for 5 minutes
+export const revalidate = 300;
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";

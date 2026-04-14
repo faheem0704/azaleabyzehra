@@ -21,13 +21,25 @@ async function getHomeData() {
       where: { isNewArrival: true, isDeleted: false },
       take: 10,
       orderBy: { createdAt: "desc" },
-      include: { category: true },
+      select: {
+        id: true, name: true, slug: true, price: true, compareAtPrice: true,
+        images: true, imageAlts: true, stock: true, featured: true, isNewArrival: true,
+        categoryId: true, sizes: true, colors: true, fabric: true,
+        description: true, createdAt: true,
+        category: { select: { id: true, name: true, slug: true, parentId: true } },
+      },
     }),
     prisma.product.findMany({
       where: { featured: true, isDeleted: false },
       take: 8,
       orderBy: { createdAt: "desc" },
-      include: { category: true },
+      select: {
+        id: true, name: true, slug: true, price: true, compareAtPrice: true,
+        images: true, imageAlts: true, stock: true, featured: true, isNewArrival: true,
+        categoryId: true, sizes: true, colors: true, fabric: true,
+        description: true, createdAt: true,
+        category: { select: { id: true, name: true, slug: true, parentId: true } },
+      },
     }),
   ]);
 

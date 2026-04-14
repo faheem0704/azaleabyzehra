@@ -68,7 +68,16 @@ export async function GET(req: NextRequest) {
     prisma.product.count({ where }),
     prisma.product.findMany({
       where,
-      include: { category: true, _count: { select: { reviews: true } } },
+      // select only fields the listing page needs — avoids fetching description,
+      // full category object, review bodies, etc.
+      select: {
+        id: true, name: true, slug: true, description: true, price: true,
+        compareAtPrice: true, images: true, imageAlts: true, categoryId: true,
+        sizes: true, colors: true, fabric: true, stock: true,
+        featured: true, isNewArrival: true, createdAt: true,
+        category: { select: { id: true, name: true, slug: true, parentId: true } },
+        _count: { select: { reviews: true } },
+      },
       orderBy,
       skip: (page - 1) * pageSize,
       take: pageSize,

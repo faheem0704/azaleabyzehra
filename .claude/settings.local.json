@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(grep -n \"BUG-\" app/api/orders/route.ts app/api/payment/create/route.ts app/api/payment/verify/route.ts app/api/products/route.ts app/api/auth/register-otp/route.ts app/api/products/[id]/reviews/route.ts app/api/admin/csv/import/route.ts app/api/cart/route.ts app/api/config/store/route.ts components/checkout/CheckoutPageClient.tsx components/layout/CartSync.tsx prisma/schema.prisma)",
+      "Bash(npx prisma:*)"
+    ]
+  }
+}
