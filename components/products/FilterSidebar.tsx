@@ -67,6 +67,17 @@ export default function FilterSidebar({ filters, onFilterChange, onReset }: Filt
     onFilterChange({ sizes });
   };
 
+  const toggleColor = (color: string) => {
+    const colors = filters.colors.includes(color)
+      ? filters.colors.filter((c) => c !== color)
+      : [...filters.colors, color];
+    onFilterChange({ colors });
+  };
+
+  const toggleFabric = (fabric: string) => {
+    onFilterChange({ fabric: filters.fabric === fabric ? "" : fabric });
+  };
+
   const activeCount =
     (filters.colors.length > 0 ? 1 : 0) +
     (filters.sizes.length > 0 ? 1 : 0) +
@@ -156,7 +167,7 @@ export default function FilterSidebar({ filters, onFilterChange, onReset }: Filt
       <AccordionSection title="Color">
         <div className="space-y-2">
           {COLORS.map((color) => (
-            <label key={color} className="flex items-center gap-3 cursor-pointer group">
+            <label key={color} onClick={() => toggleColor(color)} className="flex items-center gap-3 cursor-pointer group">
               <div
                 className={cn(
                   "w-4 h-4 border transition-all duration-200",
@@ -181,7 +192,7 @@ export default function FilterSidebar({ filters, onFilterChange, onReset }: Filt
       <AccordionSection title="Fabric">
         <div className="space-y-2">
           {FABRICS.map((fabric) => (
-            <label key={fabric} className="flex items-center gap-3 cursor-pointer group">
+            <label key={fabric} onClick={() => toggleFabric(fabric)} className="flex items-center gap-3 cursor-pointer group">
               <div
                 className={cn(
                   "w-4 h-4 border transition-all duration-200",
@@ -196,10 +207,7 @@ export default function FilterSidebar({ filters, onFilterChange, onReset }: Filt
                   </svg>
                 )}
               </div>
-              <span
-                className="font-inter text-sm text-charcoal-light group-hover:text-charcoal cursor-pointer"
-                onClick={() => onFilterChange({ fabric: filters.fabric === fabric ? "" : fabric })}
-              >
+              <span className="font-inter text-sm text-charcoal-light group-hover:text-charcoal">
                 {fabric}
               </span>
             </label>
