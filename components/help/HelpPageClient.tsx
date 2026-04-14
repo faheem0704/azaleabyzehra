@@ -43,7 +43,7 @@ export default function HelpPageClient() {
       <div className="section-padding text-center mb-20">
         <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="section-subtitle mb-4">Support</motion.p>
         <motion.h1 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="section-title mb-6">How Can We Help?</motion.h1>
-        <a href="https://wa.me/923001234567" target="_blank" rel="noopener noreferrer"
+        <a href="https://wa.me/919001234567" target="_blank" rel="noopener noreferrer"
           className="inline-flex items-center gap-2 bg-green-500 text-white px-6 py-3 font-inter text-sm tracking-widest uppercase hover:bg-green-600 transition-colors">
           <MessageCircle size={16} />
           Chat on WhatsApp
@@ -51,9 +51,14 @@ export default function HelpPageClient() {
       </div>
 
       <div className="section-padding">
-        {/* FAQ */}
+        {/* FAQ — section anchors for footer links */}
         <div className="max-w-3xl mx-auto mb-24">
           <h2 className="font-playfair text-3xl text-charcoal mb-8">Frequently Asked Questions</h2>
+
+          {/* Anchor targets for footer deep-links */}
+          <div id="shipping" className="scroll-mt-28" />
+          <div id="returns" className="scroll-mt-28" />
+          <div id="sizing" className="scroll-mt-28" />
 
           {/* Category Filter */}
           <div className="flex gap-3 mb-8 flex-wrap">
