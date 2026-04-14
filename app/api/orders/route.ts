@@ -128,14 +128,53 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Decrement stock for each ordered item
+    // Decrement variant-level stock (falls back to product.stock if no variants)
+    const settings = await prisma.settings.findFirst().catch(() => null);
+    const lowStockThreshold = settings?.lowStockThreshold ?? 5;
+    const adminEmail = settings?.adminEmail ?? null;
+
     await Promise.all(
-      items.map((item: { productId: string; quantity: number }) =>
-        prisma.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        }).catch(() => {}) // non-blocking — order already placed
-      )
+      items.map(async (item: { productId: string; quantity: number; size: string; color: string }) => {
+        // Try variant first
+        const variant = await prisma.productVariant.findUnique({
+          where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color } },
+        }).catch(() => null);
+
+        if (variant) {
+          const updated = await prisma.productVariant.update({
+            where: { id: variant.id },
+            data: { stock: { decrement: item.quantity } },
+          }).catch(() => null);
+
+          // Sync product total stock
+          const total = await prisma.productVariant.aggregate({
+            where: { productId: item.productId },
+            _sum: { stock: true },
+          });
+          await prisma.product.update({
+            where: { id: item.productId },
+            data: { stock: total._sum.stock ?? 0 },
+          }).catch(() => {});
+
+          // Low stock alert
+          if (updated && updated.stock <= lowStockThreshold && adminEmail) {
+            const product = await prisma.product.findUnique({ where: { id: item.productId }, select: { name: true } });
+            const { sendLowStockAlert } = await import("@/lib/resend");
+            sendLowStockAlert(adminEmail, {
+              productName: product?.name ?? item.productId,
+              size: item.size,
+              color: item.color,
+              remaining: updated.stock,
+            }).catch(console.error);
+          }
+        } else {
+          // Fallback: decrement product.stock
+          await prisma.product.update({
+            where: { id: item.productId },
+            data: { stock: { decrement: item.quantity } },
+          }).catch(() => {});
+        }
+      })
     );
 
     const contactEmail = order.user?.email;

@@ -89,6 +89,28 @@ export async function sendOrderConfirmationEmail(
   });
 }
 
+export async function sendLowStockAlert(
+  adminEmail: string,
+  info: { productName: string; size: string; color: string; remaining: number }
+): Promise<void> {
+  await getResend().emails.send({
+    from: FROM,
+    to: adminEmail,
+    subject: `Low Stock Alert: ${info.productName} (${info.size} / ${info.color})`,
+    html: `
+      <div style="font-family: Georgia, serif; max-width: 480px; margin: 0 auto; padding: 40px 24px; background: #FAF6EE;">
+        <h1 style="font-size: 24px; color: #3D3D3D;">Azalea by Zehra — Low Stock Alert</h1>
+        <div style="background: #fff; border: 1px solid #F5EDE0; border-radius: 12px; padding: 24px; margin: 24px 0;">
+          <p style="color: #6B6B6B; font-size: 15px; margin: 0 0 8px 0;"><strong>${info.productName}</strong></p>
+          <p style="color: #6B6B6B; font-size: 14px; margin: 4px 0;">Size: ${info.size} &nbsp;·&nbsp; Color: ${info.color}</p>
+          <p style="color: #C9956C; font-size: 22px; font-weight: 700; margin: 16px 0 0 0;">${info.remaining} unit${info.remaining === 1 ? "" : "s"} remaining</p>
+        </div>
+        <p style="color: #A8929E; font-size: 13px;">Log in to your admin panel to restock this variant.</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendShipmentEmail(
   email: string,
   orderId: string,

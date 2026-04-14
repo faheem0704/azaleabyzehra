@@ -176,13 +176,23 @@ export default function AdminOrdersClient({ orders: initialOrders }: { orders: O
                       <div className="mt-6">
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="font-inter text-xs tracking-widest uppercase text-charcoal-light">Delivery Address</h3>
-                          <button
-                            onClick={() => printLabel(order)}
-                            className="flex items-center gap-1.5 text-xs font-inter text-rose-gold hover:text-rose-gold-dark transition-colors"
-                          >
-                            <Printer size={13} />
-                            Print Label
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => printLabel(order)}
+                              className="flex items-center gap-1.5 text-xs font-inter text-rose-gold hover:text-rose-gold-dark transition-colors"
+                            >
+                              <Printer size={13} />
+                              Label
+                            </button>
+                            <a
+                              href={`/admin/orders/${order.id}/invoice`}
+                              target="_blank"
+                              className="flex items-center gap-1.5 text-xs font-inter text-charcoal-light hover:text-charcoal transition-colors"
+                            >
+                              <Printer size={13} />
+                              Invoice
+                            </a>
+                          </div>
                         </div>
                         {order.address && (() => {
                           const addr = order.address as any;

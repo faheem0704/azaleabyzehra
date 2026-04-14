@@ -2,8 +2,8 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Edit2, Trash2, X, Upload, Star, Sparkles } from "lucide-react";
-import { Product, Category } from "@/types";
+import { Plus, Edit2, Trash2, X, Upload, Star, Sparkles, Download, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
+import { Product, Category, ProductVariant } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -17,66 +17,136 @@ interface Props {
 const EMPTY_FORM = {
   name: "", description: "", price: "", compareAtPrice: "",
   categoryId: "", sizes: "S,M,L,XL", colors: "Black,White",
-  fabric: "", stock: "10", featured: false, isNewArrival: false,
+  fabric: "", featured: false, isNewArrival: false,
 };
+
+type ImageEntry = { url: string; alt: string };
+
+// Build variant map key
+const vkey = (size: string, color: string) => `${size}||${color}`;
 
 export default function AdminProductsClient({ products: initial, categories }: Props) {
   const [products, setProducts] = useState(initial);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<ImageEntry[]>([]);
+  const [variantStock, setVariantStock] = useState<Record<string, number>>({});
+  const [variantSku, setVariantSku] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [csvImporting, setCsvImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
-  const openCreate = () => { setEditingProduct(null); setForm({ ...EMPTY_FORM }); setImages([]); setIsModalOpen(true); };
+  const parsedSizes = form.sizes.split(",").map((s) => s.trim()).filter(Boolean);
+  const parsedColors = form.colors.split(",").map((c) => c.trim()).filter(Boolean);
+
+  // Rebuild variant map when sizes/colors change — preserve existing stock values
+  const buildVariantMap = (sizes: string[], colors: string[]) => {
+    const newStock: Record<string, number> = {};
+    const newSku: Record<string, string> = {};
+    for (const s of sizes) {
+      for (const c of colors) {
+        const k = vkey(s, c);
+        newStock[k] = variantStock[k] ?? 0;
+        newSku[k] = variantSku[k] ?? "";
+      }
+    }
+    setVariantStock(newStock);
+    setVariantSku(newSku);
+  };
+
+  const openCreate = () => {
+    setEditingProduct(null);
+    setForm({ ...EMPTY_FORM });
+    setImages([]);
+    const sizes = EMPTY_FORM.sizes.split(",").map(s => s.trim()).filter(Boolean);
+    const colors = EMPTY_FORM.colors.split(",").map(c => c.trim()).filter(Boolean);
+    const stock: Record<string, number> = {};
+    const sku: Record<string, string> = {};
+    for (const s of sizes) for (const c of colors) { stock[vkey(s, c)] = 0; sku[vkey(s, c)] = ""; }
+    setVariantStock(stock);
+    setVariantSku(sku);
+    setIsModalOpen(true);
+  };
+
   const openEdit = (p: Product) => {
     setEditingProduct(p);
     setForm({
       name: p.name, description: p.description, price: p.price.toString(),
       compareAtPrice: p.compareAtPrice?.toString() || "", categoryId: p.categoryId,
       sizes: p.sizes.join(","), colors: p.colors.join(","),
-      fabric: p.fabric || "", stock: p.stock.toString(),
-      featured: p.featured, isNewArrival: p.isNewArrival,
+      fabric: p.fabric || "", featured: p.featured, isNewArrival: p.isNewArrival,
     });
-    setImages(p.images);
+    setImages(p.images.map((url, i) => ({ url, alt: p.imageAlts?.[i] ?? "" })));
+
+    const stock: Record<string, number> = {};
+    const sku: Record<string, string> = {};
+    for (const s of p.sizes) for (const c of p.colors) { stock[vkey(s, c)] = 0; sku[vkey(s, c)] = ""; }
+    if (p.variants) {
+      for (const v of p.variants) { stock[vkey(v.size, v.color)] = v.stock; sku[vkey(v.size, v.color)] = v.sku ?? ""; }
+    }
+    setVariantStock(stock);
+    setVariantSku(sku);
     setIsModalOpen(true);
   };
 
   const handleUpload = async (files: FileList | null) => {
     if (!files) return;
     setUploading(true);
-    const uploaded: string[] = [];
+    const uploaded: ImageEntry[] = [];
     for (const file of Array.from(files)) {
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       const data = await res.json();
-      if (data.url) uploaded.push(data.url);
+      if (data.url) uploaded.push({ url: data.url, alt: "" });
     }
     setImages((prev) => [...prev, ...uploaded]);
     setUploading(false);
     toast.success(`${uploaded.length} image(s) uploaded`);
   };
 
+  const moveImage = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= images.length) return;
+    const next = [...images];
+    [next[i], next[j]] = [next[j], next[i]];
+    setImages(next);
+  };
+
+  const updateImageAlt = (i: number, alt: string) => {
+    setImages((prev) => prev.map((img, idx) => idx === i ? { ...img, alt } : img));
+  };
+
   const handleSave = async () => {
     if (!form.name || !form.price || !form.categoryId) { toast.error("Fill required fields"); return; }
     setSaving(true);
     try {
+      const variants = parsedSizes.flatMap((size) =>
+        parsedColors.map((color) => ({
+          size, color,
+          stock: variantStock[vkey(size, color)] ?? 0,
+          sku: variantSku[vkey(size, color)] || undefined,
+        }))
+      );
+      const totalStock = variants.reduce((s, v) => s + v.stock, 0);
+
       const body = {
         name: form.name,
         description: form.description,
         price: parseFloat(form.price),
         compareAtPrice: form.compareAtPrice ? parseFloat(form.compareAtPrice) : null,
         categoryId: form.categoryId,
-        sizes: form.sizes.split(",").map(s => s.trim()).filter(Boolean),
-        colors: form.colors.split(",").map(c => c.trim()).filter(Boolean),
+        sizes: parsedSizes,
+        colors: parsedColors,
         fabric: form.fabric || null,
-        stock: parseInt(form.stock) || 0,
+        stock: totalStock,
         featured: form.featured,
         isNewArrival: form.isNewArrival,
-        images,
+        images: images.map((i) => i.url),
+        imageAlts: images.map((i) => i.alt),
       };
 
       const url = editingProduct ? `/api/products/${editingProduct.id}` : "/api/products";
@@ -85,11 +155,18 @@ export default function AdminProductsClient({ products: initial, categories }: P
       const saved = await res.json();
       if (!res.ok) throw new Error(saved.error);
 
+      // Save variants
+      await fetch(`/api/products/${saved.id}/variants`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variants }),
+      });
+
       if (editingProduct) {
-        setProducts((prev) => prev.map((p) => p.id === saved.id ? { ...p, ...saved } : p));
+        setProducts((prev) => prev.map((p) => p.id === saved.id ? { ...p, ...saved, variants: variants as ProductVariant[] } : p));
         toast.success("Product updated");
       } else {
-        setProducts((prev) => [saved, ...prev]);
+        setProducts((prev) => [{ ...saved, variants: variants as ProductVariant[] }, ...prev]);
         toast.success("Product created");
       }
       setIsModalOpen(false);
@@ -107,17 +184,75 @@ export default function AdminProductsClient({ products: initial, categories }: P
     toast.success("Product deleted");
   };
 
+  const handleCSVExport = () => {
+    window.location.href = "/api/admin/csv/export";
+  };
+
+  const handleCSVImport = async (file: File | null) => {
+    if (!file) return;
+    setCsvImporting(true);
+    try {
+      const text = await file.text();
+      const res = await fetch("/api/admin/csv/import", {
+        method: "POST",
+        headers: { "Content-Type": "text/csv" },
+        body: text,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`Imported: ${data.created} created, ${data.updated} updated${data.errors.length > 0 ? ` (${data.errors.length} errors)` : ""}`);
+      window.location.reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setCsvImporting(false);
+    }
+  };
+
+  // Low stock: total variant stock or product.stock < 5
+  const isLowStock = (p: Product) => {
+    if (p.variants && p.variants.length > 0) {
+      return p.variants.some((v) => v.stock <= 5);
+    }
+    return p.stock <= 5 && p.stock >= 0;
+  };
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <div>
           <h1 className="font-playfair text-3xl text-charcoal">Products</h1>
           <p className="font-inter text-sm text-charcoal-light mt-1">{products.length} products</p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus size={16} className="mr-2" />
-          Add Product
-        </Button>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* CSV */}
+          <button
+            onClick={handleCSVExport}
+            className="flex items-center gap-2 px-4 py-2 border border-ivory-200 font-inter text-xs tracking-widest uppercase text-charcoal-light hover:border-charcoal hover:text-charcoal transition-all"
+          >
+            <Download size={14} />
+            Export CSV
+          </button>
+          <button
+            onClick={() => csvInputRef.current?.click()}
+            disabled={csvImporting}
+            className="flex items-center gap-2 px-4 py-2 border border-ivory-200 font-inter text-xs tracking-widest uppercase text-charcoal-light hover:border-charcoal hover:text-charcoal transition-all disabled:opacity-40"
+          >
+            <Upload size={14} />
+            {csvImporting ? "Importing…" : "Import CSV"}
+          </button>
+          <input
+            ref={csvInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => handleCSVImport(e.target.files?.[0] ?? null)}
+          />
+          <Button onClick={openCreate}>
+            <Plus size={16} className="mr-2" />
+            Add Product
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -137,7 +272,7 @@ export default function AdminProductsClient({ products: initial, categories }: P
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-12 flex-shrink-0 bg-ivory-200 overflow-hidden">
-                        {p.images[0] && <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" />}
+                        {p.images[0] && <img src={p.images[0]} alt={p.imageAlts?.[0] || p.name} className="w-full h-full object-cover" />}
                       </div>
                       <p className="font-inter text-sm text-charcoal line-clamp-1 max-w-[200px]">{p.name}</p>
                     </div>
@@ -149,12 +284,15 @@ export default function AdminProductsClient({ products: initial, categories }: P
                     <span className="font-inter text-sm text-charcoal">{formatPrice(p.price)}</span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`font-inter text-sm ${p.stock === 0 ? "text-red-500" : p.stock < 5 ? "text-amber-500" : "text-charcoal"}`}>
-                      {p.stock}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {isLowStock(p) && <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />}
+                      <span className={`font-inter text-sm ${p.stock === 0 ? "text-red-500" : isLowStock(p) ? "text-amber-500" : "text-charcoal"}`}>
+                        {p.stock}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       {p.featured && <span className="text-[10px] font-inter bg-rose-gold/10 text-rose-gold px-2 py-0.5">Featured</span>}
                       {p.isNewArrival && <span className="text-[10px] font-inter bg-charcoal/10 text-charcoal px-2 py-0.5">New</span>}
                     </div>
@@ -194,7 +332,7 @@ export default function AdminProductsClient({ products: initial, categories }: P
               </div>
 
               <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Left */}
+                {/* Left — Product Info */}
                 <div className="space-y-5">
                   <Input label="Product Name *" value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Elegant Lawn Kurti" />
                   <div>
@@ -222,10 +360,78 @@ export default function AdminProductsClient({ products: initial, categories }: P
                       {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
-                  <Input label="Sizes (comma-separated)" value={form.sizes} onChange={(e) => setForm(p => ({ ...p, sizes: e.target.value }))} placeholder="S,M,L,XL,XXL" />
-                  <Input label="Colors (comma-separated)" value={form.colors} onChange={(e) => setForm(p => ({ ...p, colors: e.target.value }))} placeholder="Black,White,Navy" />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input
+                      label="Sizes (comma-separated)"
+                      value={form.sizes}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setForm(p => ({ ...p, sizes: val }));
+                        const sizes = val.split(",").map(s => s.trim()).filter(Boolean);
+                        buildVariantMap(sizes, parsedColors);
+                      }}
+                      placeholder="S,M,L,XL,XXL"
+                    />
+                    <Input
+                      label="Colors (comma-separated)"
+                      value={form.colors}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setForm(p => ({ ...p, colors: val }));
+                        const colors = val.split(",").map(c => c.trim()).filter(Boolean);
+                        buildVariantMap(parsedSizes, colors);
+                      }}
+                      placeholder="Black,White,Navy"
+                    />
+                  </div>
                   <Input label="Fabric" value={form.fabric} onChange={(e) => setForm(p => ({ ...p, fabric: e.target.value }))} placeholder="Lawn Cotton" />
-                  <Input label="Stock Quantity" type="number" value={form.stock} onChange={(e) => setForm(p => ({ ...p, stock: e.target.value }))} />
+
+                  {/* Variant Stock Grid */}
+                  {parsedSizes.length > 0 && parsedColors.length > 0 && (
+                    <div>
+                      <label className="block text-xs font-inter tracking-widest uppercase text-charcoal-light mb-3">
+                        Stock per Variant
+                      </label>
+                      <div className="border border-ivory-200 overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-ivory-200/50">
+                              <th className="px-3 py-2 text-left font-inter text-xs text-charcoal-light font-normal">Size / Color</th>
+                              {parsedColors.map((c) => (
+                                <th key={c} className="px-3 py-2 text-center font-inter text-xs text-charcoal font-medium min-w-[80px]">{c}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-ivory-200">
+                            {parsedSizes.map((s) => (
+                              <tr key={s} className="hover:bg-ivory-200/20">
+                                <td className="px-3 py-2 font-inter text-xs font-medium text-charcoal">{s}</td>
+                                {parsedColors.map((c) => {
+                                  const k = vkey(s, c);
+                                  return (
+                                    <td key={c} className="px-2 py-1.5">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        value={variantStock[k] ?? 0}
+                                        onChange={(e) => setVariantStock(prev => ({ ...prev, [k]: parseInt(e.target.value) || 0 }))}
+                                        className="w-full border border-ivory-200 px-2 py-1.5 text-center text-sm font-inter focus:outline-none focus:border-rose-gold"
+                                      />
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="font-inter text-xs text-mauve mt-2">
+                        Total stock: {parsedSizes.flatMap(s => parsedColors.map(c => variantStock[vkey(s, c)] ?? 0)).reduce((a, b) => a + b, 0)} units
+                      </p>
+                    </div>
+                  )}
+
                   <div className="flex gap-6">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input type="checkbox" checked={form.featured} onChange={(e) => setForm(p => ({ ...p, featured: e.target.checked }))} className="w-4 h-4 accent-rose-gold" />
@@ -238,7 +444,7 @@ export default function AdminProductsClient({ products: initial, categories }: P
                   </div>
                 </div>
 
-                {/* Right — Images */}
+                {/* Right — Images with reordering + alt text */}
                 <div>
                   <label className="block text-xs font-inter tracking-widest uppercase text-charcoal-light mb-4">Product Images</label>
                   <div
@@ -250,22 +456,43 @@ export default function AdminProductsClient({ products: initial, categories }: P
                     <p className="font-inter text-xs text-mauve mt-1">JPG, PNG, WebP — First image is thumbnail</p>
                   </div>
                   <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={(e) => handleUpload(e.target.files)} />
+                  {uploading && <p className="text-sm font-inter text-rose-gold mb-3">Uploading…</p>}
 
-                  {uploading && <p className="text-sm font-inter text-rose-gold mb-3">Uploading...</p>}
-
-                  <div className="grid grid-cols-3 gap-3">
-                    {images.map((url, i) => (
-                      <div key={i} className="relative aspect-square bg-ivory-200 overflow-hidden group">
-                        <img src={url} alt="" className="w-full h-full object-cover" />
-                        <button
-                          onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
-                          className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X size={12} />
-                        </button>
-                        {i === 0 && <span className="absolute bottom-1 left-1 bg-rose-gold text-white text-[10px] font-inter px-1.5 py-0.5">Thumbnail</span>}
+                  <div className="space-y-3">
+                    {images.map((img, i) => (
+                      <div key={i} className="flex gap-3 border border-ivory-200 p-3">
+                        {/* Thumbnail */}
+                        <div className="relative w-16 h-20 flex-shrink-0 bg-ivory-200 overflow-hidden">
+                          <img src={img.url} alt={img.alt || ""} className="w-full h-full object-cover" />
+                          {i === 0 && <span className="absolute bottom-0 left-0 right-0 bg-rose-gold text-white text-[9px] font-inter text-center py-0.5">Thumbnail</span>}
+                        </div>
+                        {/* Alt text + controls */}
+                        <div className="flex-1 min-w-0">
+                          <input
+                            type="text"
+                            value={img.alt}
+                            onChange={(e) => updateImageAlt(i, e.target.value)}
+                            placeholder="Alt text (for SEO & accessibility)"
+                            className="w-full border border-ivory-200 px-2 py-1.5 text-xs font-inter focus:outline-none focus:border-rose-gold"
+                          />
+                        </div>
+                        {/* Order + remove buttons */}
+                        <div className="flex flex-col gap-1 flex-shrink-0">
+                          <button onClick={() => moveImage(i, -1)} disabled={i === 0} className="w-6 h-6 flex items-center justify-center text-mauve hover:text-charcoal disabled:opacity-20">
+                            <ChevronUp size={14} />
+                          </button>
+                          <button onClick={() => moveImage(i, 1)} disabled={i === images.length - 1} className="w-6 h-6 flex items-center justify-center text-mauve hover:text-charcoal disabled:opacity-20">
+                            <ChevronDown size={14} />
+                          </button>
+                          <button onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))} className="w-6 h-6 flex items-center justify-center text-mauve hover:text-red-500">
+                            <X size={12} />
+                          </button>
+                        </div>
                       </div>
                     ))}
+                    {images.length === 0 && (
+                      <p className="font-inter text-xs text-mauve text-center py-4">No images yet</p>
+                    )}
                   </div>
                 </div>
               </div>

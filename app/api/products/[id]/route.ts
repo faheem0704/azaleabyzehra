@@ -17,6 +17,7 @@ export async function GET(
     include: {
       category: { include: { parent: true } },
       reviews: { include: { user: { select: { name: true, id: true } } }, orderBy: { createdAt: "desc" } },
+      variants: { orderBy: [{ size: "asc" }, { color: "asc" }] },
     },
   });
 

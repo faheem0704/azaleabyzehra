@@ -27,6 +27,15 @@ export interface ProductImage {
   alt?: string;
 }
 
+export interface ProductVariant {
+  id: string;
+  productId: string;
+  size: string;
+  color: string;
+  stock: number;
+  sku: string | null;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -35,6 +44,7 @@ export interface Product {
   price: number;
   compareAtPrice: number | null;
   images: string[];
+  imageAlts: string[];
   categoryId: string;
   category?: Category;
   sizes: string[];
@@ -45,6 +55,7 @@ export interface Product {
   isNewArrival: boolean;
   createdAt: Date;
   reviews?: Review[];
+  variants?: ProductVariant[];
   _count?: { reviews: number };
 }
 
