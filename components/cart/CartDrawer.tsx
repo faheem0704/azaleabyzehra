@@ -1,16 +1,59 @@
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ShoppingBag, Trash2, Plus, Minus } from "lucide-react";
+import { X, ShoppingBag, Trash2, Plus, Minus, Tag } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCartStore } from "@/store/cartStore";
 import { formatPrice } from "@/lib/utils";
 import Button from "@/components/ui/Button";
+import toast from "react-hot-toast";
+
+interface PromoResult {
+  code: string;
+  discountPercent: number;
+  maxDiscount: number | null;
+  discountAmount: number;
+  message: string;
+}
 
 export default function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, totalPrice, totalItems } =
     useCartStore();
+
+  const [promoInput, setPromoInput] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState<PromoResult | null>(null);
+
+  const subtotal = totalPrice();
+  const discount = appliedPromo?.discountAmount ?? 0;
+
+  const applyPromo = async () => {
+    if (!promoInput.trim()) return;
+    setPromoLoading(true);
+    try {
+      const res = await fetch("/api/promo/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: promoInput.trim(),
+          items: items.map((i) => ({ productId: i.productId, price: i.price, quantity: i.quantity })),
+          subtotal,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setAppliedPromo(data);
+      toast.success(`Promo applied: ${data.message}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Invalid promo code");
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const removePromo = () => { setAppliedPromo(null); setPromoInput(""); };
 
   return (
     <AnimatePresence>
@@ -145,24 +188,56 @@ export default function CartDrawer() {
             {items.length > 0 && (
               <div className="border-t border-ivory-200 px-6 py-6 space-y-4">
                 {/* Promo code */}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Promo code"
-                    className="flex-1 border border-ivory-200 px-3 py-2 text-sm font-inter text-charcoal placeholder-mauve focus:outline-none focus:border-rose-gold"
-                  />
-                  <button className="px-4 py-2 border border-charcoal text-charcoal text-xs font-inter tracking-widest uppercase hover:bg-charcoal hover:text-ivory transition-all duration-200">
-                    Apply
-                  </button>
-                </div>
+                {appliedPromo ? (
+                  <div className="flex items-center justify-between bg-rose-gold/5 border border-rose-gold/30 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <Tag size={14} className="text-rose-gold" />
+                      <span className="font-inter text-sm font-medium text-charcoal tracking-widest">{appliedPromo.code}</span>
+                      <span className="font-inter text-xs text-rose-gold">{appliedPromo.message}</span>
+                    </div>
+                    <button onClick={removePromo} className="text-mauve hover:text-charcoal transition-colors">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={promoInput}
+                      onChange={(e) => setPromoInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && applyPromo()}
+                      placeholder="Promo code"
+                      className="flex-1 border border-ivory-200 px-3 py-2 text-sm font-inter text-charcoal placeholder-mauve focus:outline-none focus:border-rose-gold"
+                    />
+                    <button
+                      onClick={applyPromo}
+                      disabled={promoLoading || !promoInput.trim()}
+                      className="px-4 py-2 border border-charcoal text-charcoal text-xs font-inter tracking-widest uppercase hover:bg-charcoal hover:text-ivory transition-all duration-200 disabled:opacity-40"
+                    >
+                      {promoLoading ? "…" : "Apply"}
+                    </button>
+                  </div>
+                )}
 
                 {/* Total */}
-                <div className="flex items-center justify-between">
-                  <span className="font-inter text-sm text-charcoal-light">Subtotal</span>
-                  <span className="font-playfair text-lg text-charcoal">{formatPrice(totalPrice())}</span>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-inter text-sm text-charcoal-light">Subtotal</span>
+                    <span className="font-inter text-sm text-charcoal">{formatPrice(subtotal)}</span>
+                  </div>
+                  {discount > 0 && (
+                    <div className="flex items-center justify-between text-rose-gold">
+                      <span className="font-inter text-sm">Discount</span>
+                      <span className="font-inter text-sm">−{formatPrice(discount)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between border-t border-ivory-200 pt-2">
+                    <span className="font-inter text-sm font-medium text-charcoal">Total</span>
+                    <span className="font-playfair text-lg text-charcoal">{formatPrice(Math.max(0, subtotal - discount))}</span>
+                  </div>
                 </div>
                 <p className="text-xs font-inter text-mauve">
-                  Shipping & taxes calculated at checkout
+                  Shipping calculated at checkout
                 </p>
 
                 <Link href="/checkout" onClick={closeCart}>
