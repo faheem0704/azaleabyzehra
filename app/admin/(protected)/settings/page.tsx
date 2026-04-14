@@ -12,12 +12,8 @@ export default function AdminSettingsPage() {
     whatsappNumber: "+91-900-000-0000",
     address: "123 Fashion Street, Bandra West, Mumbai, India",
     phone: "+91 900 123 4567",
-    razorpayKeyId: "",
-    razorpaySecret: "",
-    resendApiKey: "",
-    twilioSid: "",
-    twilioToken: "",
-    twilioPhone: "",
+    lowStockThreshold: "5",
+    adminEmail: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -54,6 +50,8 @@ export default function AdminSettingsPage() {
           whatsappNumber: form.whatsappNumber,
           address: form.address,
           phone: form.phone,
+          lowStockThreshold: Number(form.lowStockThreshold),
+          adminEmail: form.adminEmail,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
@@ -138,26 +136,16 @@ export default function AdminSettingsPage() {
           <Input label="Address" {...f("address")} placeholder="Street, City, State, Country" />
         </div>
 
-        {/* Payments */}
+        {/* Alerts */}
         <div className="bg-white border border-ivory-200 p-6 space-y-5">
-          <h2 className="font-playfair text-xl text-charcoal">Payment Gateway</h2>
-          <p className="font-inter text-xs text-mauve">Set via environment variables for security. These override .env.local.</p>
-          <Input label="Razorpay Key ID" {...f("razorpayKeyId")} placeholder="rzp_live_..." />
-          <Input label="Razorpay Secret" type="password" {...f("razorpaySecret")} />
-        </div>
-
-        {/* Email */}
-        <div className="bg-white border border-ivory-200 p-6 space-y-5">
-          <h2 className="font-playfair text-xl text-charcoal">Email (Resend)</h2>
-          <Input label="Resend API Key" type="password" {...f("resendApiKey")} placeholder="re_..." />
-        </div>
-
-        {/* SMS */}
-        <div className="bg-white border border-ivory-200 p-6 space-y-5">
-          <h2 className="font-playfair text-xl text-charcoal">SMS (Twilio)</h2>
-          <Input label="Account SID" {...f("twilioSid")} placeholder="AC..." />
-          <Input label="Auth Token" type="password" {...f("twilioToken")} />
-          <Input label="Phone Number" {...f("twilioPhone")} placeholder="+1..." />
+          <div>
+            <h2 className="font-playfair text-xl text-charcoal">Stock Alerts</h2>
+            <p className="font-inter text-xs text-mauve mt-1">
+              Get notified when a product variant falls below the stock threshold after an order.
+            </p>
+          </div>
+          <Input label="Alert Email" type="email" {...f("adminEmail")} placeholder="admin@example.com" />
+          <Input label="Low Stock Threshold" type="number" min="1" {...f("lowStockThreshold")} placeholder="5" />
         </div>
 
         <Button type="submit" loading={saving} size="lg">Save Settings</Button>

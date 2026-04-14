@@ -25,6 +25,8 @@ export const useWishlistStore = create<WishlistStore>()(
       hasItem: (productId: string) =>
         get().items.some((i) => i.productId === productId),
 
+      setItems: (items) => set({ items }),
+
       totalItems: () => get().items.length,
     }),
     {

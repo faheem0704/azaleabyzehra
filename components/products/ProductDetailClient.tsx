@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Heart, ShoppingBag, Share2, Star, ChevronRight } from "lucide-react";
-import { Product } from "@/types";
+import { Product, ProductVariant } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cartStore";
 import { useWishlistStore } from "@/store/wishlistStore";
@@ -27,6 +27,34 @@ export default function ProductDetailClient({ product, related }: Props) {
   const [selectedSize, setSelectedSize] = useState(product.sizes[0] || "");
   const [selectedColor, setSelectedColor] = useState(product.colors[0] || "");
   const [quantity, setQuantity] = useState(1);
+
+  const variants: ProductVariant[] = (product as any).variants ?? [];
+
+  // Get stock for a specific size+color combination
+  const getVariantStock = (size: string, color: string): number | null => {
+    if (variants.length === 0) return null; // no variant data, fall back to product.stock
+    const v = variants.find((v) => v.size === size && v.color === color);
+    return v?.stock ?? 0;
+  };
+
+  // Current variant stock
+  const currentVariantStock = getVariantStock(selectedSize, selectedColor);
+  const effectiveStock = currentVariantStock !== null ? currentVariantStock : product.stock;
+
+  // Is a given size out of stock across all its colors?
+  const isSizeOutOfStock = (size: string): boolean => {
+    if (variants.length === 0) return false;
+    const sizeVariants = variants.filter((v) => v.size === size);
+    if (sizeVariants.length === 0) return false;
+    return sizeVariants.every((v) => v.stock <= 0);
+  };
+
+  // Is a given color out of stock for the currently selected size?
+  const isColorOutOfStock = (color: string): boolean => {
+    if (variants.length === 0) return false;
+    const v = variants.find((v) => v.size === selectedSize && v.color === color);
+    return v ? v.stock <= 0 : false;
+  };
   const [activeTab, setActiveTab] = useState<"description" | "fabric" | "care" | "reviews">("description");
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
@@ -76,6 +104,7 @@ export default function ProductDetailClient({ product, related }: Props) {
   const handleAddToCart = () => {
     if (!selectedSize) { toast.error("Please select a size"); return; }
     if (!selectedColor) { toast.error("Please select a color"); return; }
+    if (effectiveStock <= 0) { toast.error("This variant is out of stock"); return; }
     addItem({ productId: product.id, product, quantity, size: selectedSize, color: selectedColor, price: product.price });
     openCart();
     toast.success("Added to cart!");
@@ -220,19 +249,30 @@ export default function ProductDetailClient({ product, related }: Props) {
                       <button className="text-xs font-inter text-rose-gold underline underline-offset-2">Size Guide</button>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {product.sizes.map((size) => (
-                        <button
-                          key={size}
-                          onClick={() => setSelectedSize(size)}
-                          className={`min-w-[48px] px-4 py-2.5 text-sm font-inter border transition-all duration-200 ${
-                            selectedSize === size
-                              ? "border-charcoal bg-charcoal text-white"
-                              : "border-ivory-200 text-charcoal hover:border-charcoal"
-                          }`}
-                        >
-                          {size}
-                        </button>
-                      ))}
+                      {product.sizes.map((size) => {
+                        const oos = isSizeOutOfStock(size);
+                        return (
+                          <button
+                            key={size}
+                            onClick={() => !oos && setSelectedSize(size)}
+                            disabled={oos}
+                            className={`relative min-w-[48px] px-4 py-2.5 text-sm font-inter border transition-all duration-200 ${
+                              oos
+                                ? "border-ivory-200 text-ivory-200 cursor-not-allowed"
+                                : selectedSize === size
+                                ? "border-charcoal bg-charcoal text-white"
+                                : "border-ivory-200 text-charcoal hover:border-charcoal"
+                            }`}
+                          >
+                            {size}
+                            {oos && (
+                              <span className="absolute inset-0 flex items-center justify-center">
+                                <span className="absolute w-full h-px bg-ivory-200 rotate-45" />
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -244,19 +284,30 @@ export default function ProductDetailClient({ product, related }: Props) {
                       Color: <span className="text-charcoal normal-case tracking-normal font-medium">{selectedColor}</span>
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {product.colors.map((color) => (
-                        <button
-                          key={color}
-                          onClick={() => setSelectedColor(color)}
-                          className={`px-4 py-2 text-sm font-inter border transition-all duration-200 ${
-                            selectedColor === color
-                              ? "border-rose-gold text-rose-gold"
-                              : "border-ivory-200 text-charcoal-light hover:border-rose-gold"
-                          }`}
-                        >
-                          {color}
-                        </button>
-                      ))}
+                      {product.colors.map((color) => {
+                        const oos = isColorOutOfStock(color);
+                        return (
+                          <button
+                            key={color}
+                            onClick={() => !oos && setSelectedColor(color)}
+                            disabled={oos}
+                            className={`relative px-4 py-2 text-sm font-inter border transition-all duration-200 ${
+                              oos
+                                ? "border-ivory-200 text-ivory-200 cursor-not-allowed"
+                                : selectedColor === color
+                                ? "border-rose-gold text-rose-gold"
+                                : "border-ivory-200 text-charcoal-light hover:border-rose-gold"
+                            }`}
+                          >
+                            {color}
+                            {oos && (
+                              <span className="absolute inset-0 flex items-center justify-center">
+                                <span className="absolute w-full h-px bg-ivory-200 rotate-45" />
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -273,14 +324,15 @@ export default function ProductDetailClient({ product, related }: Props) {
                     </button>
                     <span className="w-14 text-center font-inter text-sm text-charcoal">{quantity}</span>
                     <button
-                      onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
-                      className="w-11 h-11 flex items-center justify-center text-charcoal hover:text-rose-gold transition-colors"
+                      onClick={() => setQuantity(q => Math.min(Math.max(effectiveStock, 1), q + 1))}
+                      disabled={effectiveStock <= 0}
+                      className="w-11 h-11 flex items-center justify-center text-charcoal hover:text-rose-gold transition-colors disabled:opacity-30"
                     >
                       +
                     </button>
                   </div>
                   <p className="mt-2 text-xs font-inter text-mauve">
-                    {product.stock > 5 ? "In Stock" : product.stock > 0 ? `Only ${product.stock} left` : "Out of Stock"}
+                    {effectiveStock > 5 ? "In Stock" : effectiveStock > 0 ? `Only ${effectiveStock} left` : "Out of Stock"}
                   </p>
                 </div>
 
@@ -288,12 +340,12 @@ export default function ProductDetailClient({ product, related }: Props) {
                 <div className="flex gap-3 mb-6">
                   <Button
                     onClick={handleAddToCart}
-                    disabled={product.stock === 0}
+                    disabled={effectiveStock <= 0}
                     className="flex-1"
                     size="lg"
                   >
                     <ShoppingBag size={16} className="mr-2" />
-                    {product.stock === 0 ? "Sold Out" : "Add to Cart"}
+                    {effectiveStock <= 0 ? "Sold Out" : "Add to Cart"}
                   </Button>
                   <motion.button
                     whileTap={{ scale: 0.9 }}

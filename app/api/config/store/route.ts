@@ -18,6 +18,8 @@ export async function GET() {
     whatsappNumber: s.whatsappNumber,
     address: s.address,
     phone: s.phone,
+    lowStockThreshold: s.lowStockThreshold,
+    adminEmail: s.adminEmail,
   });
 }
 
@@ -26,11 +28,19 @@ export async function PATCH(req: NextRequest) {
   if ((session?.user as { role?: string })?.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { storeName, contactEmail, whatsappNumber, address, phone } = await req.json();
+  const { storeName, contactEmail, whatsappNumber, address, phone, lowStockThreshold, adminEmail } = await req.json();
   const s = await getSettings();
   const updated = await prisma.settings.update({
     where: { id: s.id },
-    data: { storeName, contactEmail, whatsappNumber, address, phone },
+    data: {
+      storeName,
+      contactEmail,
+      whatsappNumber,
+      address,
+      phone,
+      ...(lowStockThreshold !== undefined ? { lowStockThreshold: Number(lowStockThreshold) } : {}),
+      ...(adminEmail !== undefined ? { adminEmail } : {}),
+    },
   });
   return NextResponse.json({
     storeName: updated.storeName,
@@ -38,5 +48,7 @@ export async function PATCH(req: NextRequest) {
     whatsappNumber: updated.whatsappNumber,
     address: updated.address,
     phone: updated.phone,
+    lowStockThreshold: updated.lowStockThreshold,
+    adminEmail: updated.adminEmail,
   });
 }

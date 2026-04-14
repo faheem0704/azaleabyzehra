@@ -186,11 +186,9 @@ export default function CheckoutPageClient() {
             size: i.size, color: i.color, price: i.price,
           })),
           address,
-          totalAmount: subtotal + shipping,
           paymentId,
           paymentGateway: gateway,
           promoCode: appliedPromo?.code,
-          discountAmount: discount,
         }),
       });
       const order = await res.json();

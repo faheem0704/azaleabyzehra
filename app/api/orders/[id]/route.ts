@@ -45,12 +45,36 @@ export async function PATCH(
   if (order.userId !== session.user.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (order.status !== "PENDING") return NextResponse.json({ error: "Only PENDING orders can be cancelled" }, { status: 400 });
 
-  // Restore stock
+  // Restore variant stock (falls back to product.stock if no variant found)
   const items = await prisma.orderItem.findMany({ where: { orderId: params.id } });
   await Promise.all(
-    items.map((item) =>
-      prisma.product.update({ where: { id: item.productId }, data: { stock: { increment: item.quantity } } }).catch(() => {})
-    )
+    items.map(async (item) => {
+      const variant = await prisma.productVariant.findUnique({
+        where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color } },
+      }).catch(() => null);
+
+      if (variant) {
+        await prisma.productVariant.update({
+          where: { id: variant.id },
+          data: { stock: { increment: item.quantity } },
+        }).catch(() => {});
+
+        // Sync product total
+        const total = await prisma.productVariant.aggregate({
+          where: { productId: item.productId },
+          _sum: { stock: true },
+        });
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: { stock: total._sum.stock ?? 0 },
+        }).catch(() => {});
+      } else {
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } },
+        }).catch(() => {});
+      }
+    })
   );
 
   const updated = await prisma.order.update({

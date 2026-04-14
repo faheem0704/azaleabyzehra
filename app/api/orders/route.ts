@@ -52,7 +52,21 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { items, address, totalAmount, paymentId, paymentGateway, promoCode, discountAmount } = body;
+    const { items, address, paymentId, paymentGateway, promoCode } = body;
+
+    // Fetch shipping settings server-side (ignore client-sent totalAmount entirely)
+    const settings = await prisma.settings.findFirst().catch(() => null);
+    const shippingFee = settings?.shippingFee ?? 199;
+    const freeShippingThreshold = settings?.freeShippingThreshold ?? 2999;
+    const lowStockThreshold = settings?.lowStockThreshold ?? 5;
+    const adminEmail = settings?.adminEmail ?? null;
+
+    // Recalculate subtotal from items server-side
+    const subtotal = items.reduce(
+      (s: number, i: { price: number; quantity: number }) => s + i.price * i.quantity,
+      0
+    );
+    const shipping = subtotal >= freeShippingThreshold ? 0 : shippingFee;
 
     // Server-side promo re-validation to prevent tampering
     let validatedDiscount = 0;
@@ -67,7 +81,6 @@ export async function POST(req: NextRequest) {
         (!promo.expiresAt || new Date() <= promo.expiresAt) &&
         (!promo.usageLimit || promo.usageCount < promo.usageLimit)) {
 
-        const subtotal = items.reduce((s: number, i: { price: number; quantity: number }) => s + i.price * i.quantity, 0);
         let eligibleSubtotal = subtotal;
 
         if (promo.productIds.length > 0) {
@@ -88,8 +101,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Use server-validated discount (ignore client-supplied discountAmount)
-    const finalTotal = Math.max(0, totalAmount - (validatedDiscount - (discountAmount || 0)));
+    // Final total = subtotal + shipping - discount (all server-calculated)
+    const finalTotal = Math.max(0, subtotal + shipping - validatedDiscount);
 
     const addressRecord = await prisma.address.create({
       data: { ...address, userId: session.user.id },
@@ -129,10 +142,6 @@ export async function POST(req: NextRequest) {
     });
 
     // Decrement variant-level stock (falls back to product.stock if no variants)
-    const settings = await prisma.settings.findFirst().catch(() => null);
-    const lowStockThreshold = settings?.lowStockThreshold ?? 5;
-    const adminEmail = settings?.adminEmail ?? null;
-
     await Promise.all(
       items.map(async (item: { productId: string; quantity: number; size: string; color: string }) => {
         // Try variant first

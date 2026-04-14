@@ -152,6 +152,7 @@ export interface CartStore {
   openCart: () => void;
   closeCart: () => void;
   setPromo: (promo: AppliedPromo | null) => void;
+  setItems: (items: CartItem[]) => void;
   totalItems: () => number;
   totalPrice: () => number;
 }
@@ -161,6 +162,7 @@ export interface WishlistStore {
   addItem: (productId: string, product?: Product) => void;
   removeItem: (productId: string) => void;
   hasItem: (productId: string) => boolean;
+  setItems: (items: WishlistItem[]) => void;
   totalItems: () => number;
 }
 

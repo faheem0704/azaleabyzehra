@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { sendOTPEmail } from "@/lib/resend";
 import { sendOTPSMS } from "@/lib/twilio";
 import { generateOTP } from "@/lib/utils";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,6 +13,14 @@ export async function POST(req: NextRequest) {
 
     if (!contact) {
       return NextResponse.json({ error: "Contact is required" }, { status: 400 });
+    }
+
+    // Max 3 OTPs per contact per 10 minutes
+    if (!checkRateLimit(`otp:${contact}`, 3, 10 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: "Too many OTP requests. Please wait 10 minutes before trying again." },
+        { status: 429 }
+      );
     }
 
     const otp = generateOTP();

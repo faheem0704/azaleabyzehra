@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Header from "./Header";
 import Footer from "./Footer";
 import CartDrawer from "@/components/cart/CartDrawer";
+import CartSync from "@/components/layout/CartSync";
 import SessionProvider from "@/components/providers/SessionProvider";
 
 async function getCategories() {
@@ -17,6 +18,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   return (
     <SessionProvider>
+      <CartSync />
       <Header categories={categories} />
       <main className="min-h-screen">{children}</main>
       <Footer />

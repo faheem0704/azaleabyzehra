@@ -22,6 +22,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "All required fields must be filled" }, { status: 400 });
   }
 
+  // Validate 10-digit Indian mobile number
+  if (!/^[6-9]\d{9}$/.test(phone.replace(/\s/g, ""))) {
+    return NextResponse.json({ error: "Enter a valid 10-digit Indian mobile number" }, { status: 400 });
+  }
+
+  // Validate 6-digit Indian PIN code
+  if (!/^\d{6}$/.test(pincode.trim())) {
+    return NextResponse.json({ error: "Enter a valid 6-digit PIN code" }, { status: 400 });
+  }
+
   if (isDefault) {
     await prisma.address.updateMany({ where: { userId: session.user.id }, data: { isDefault: false } });
   }

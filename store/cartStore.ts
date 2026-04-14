@@ -60,6 +60,7 @@ export const useCartStore = create<CartStore>()(
         });
       },
 
+      setItems: (items) => set({ items }),
       clearCart: () => set({ items: [], appliedPromo: null }),
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),

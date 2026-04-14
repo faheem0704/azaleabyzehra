@@ -22,6 +22,7 @@ const getProduct = cache(async (slug: string) =>
         orderBy: { createdAt: "desc" },
         take: 20,
       },
+      variants: true,
     },
   })
 );
