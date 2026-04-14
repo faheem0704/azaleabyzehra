@@ -13,11 +13,20 @@ export default function Newsletter() {
     e.preventDefault();
     if (!email) return;
     setLoading(true);
-    // In production, connect to your email list (Resend audience, Mailchimp, etc.)
-    await new Promise((r) => setTimeout(r, 800));
-    toast.success("You're on the list! ✨");
-    setEmail("");
-    setLoading(false);
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      toast.success("You're on the list!");
+      setEmail("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to subscribe");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

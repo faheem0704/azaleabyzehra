@@ -128,6 +128,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Decrement stock for each ordered item
+    await Promise.all(
+      items.map((item: { productId: string; quantity: number }) =>
+        prisma.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        }).catch(() => {}) // non-blocking — order already placed
+      )
+    );
+
     const contactEmail = order.user?.email;
     const contactPhone = order.user?.phone;
 

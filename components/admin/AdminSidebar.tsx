@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { LayoutDashboard, Package, ShoppingCart, Users, Tag, Settings, LogOut, Ticket, Menu, X } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, Users, Tag, Settings, LogOut, Ticket, Menu, X, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -14,6 +14,7 @@ const NAV = [
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/categories", label: "Categories", icon: Tag },
   { href: "/admin/promo-codes", label: "Promo Codes", icon: Ticket },
+  { href: "/admin/subscribers", label: "Subscribers", icon: Mail },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
