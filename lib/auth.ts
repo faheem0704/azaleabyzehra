@@ -9,16 +9,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       id: "password-credentials",
       name: "Password",
       credentials: {
-        email: { label: "Email", type: "email" },
+        contact: { label: "Email or Phone", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.contact || !credentials?.password) return null;
 
-        const email = credentials.email as string;
+        const contact = credentials.contact as string;
         const password = credentials.password as string;
+        const isEmail = contact.includes("@");
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findFirst({
+          where: isEmail ? { email: contact } : { phone: contact },
+        });
         if (!user || !user.passwordHash) return null;
 
         const valid = await bcrypt.compare(password, user.passwordHash);
@@ -58,17 +61,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           data: { used: true },
         });
 
-        // Find or create user
+        // Find existing user only (otp-credentials is for login, not signup)
         const isEmail = contact.includes("@");
-        let user = await prisma.user.findFirst({
+        const user = await prisma.user.findFirst({
           where: isEmail ? { email: contact } : { phone: contact },
         });
 
-        if (!user) {
-          user = await prisma.user.create({
-            data: isEmail ? { email: contact } : { phone: contact },
-          });
-        }
+        if (!user) return null;
 
         return {
           id: user.id,
