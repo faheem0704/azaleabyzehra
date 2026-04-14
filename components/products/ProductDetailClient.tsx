@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -13,6 +13,7 @@ import { useSession } from "next-auth/react";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import ProductCard from "./ProductCard";
+import RecentlyViewed, { trackProductView } from "./RecentlyViewed";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -29,6 +30,8 @@ export default function ProductDetailClient({ product, related }: Props) {
   const [activeTab, setActiveTab] = useState<"description" | "fabric" | "care" | "reviews">("description");
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+  useEffect(() => { trackProductView(product.id); }, [product.id]);
+
   const [reviews, setReviews] = useState<any[]>(product.reviews || []);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -451,6 +454,8 @@ export default function ProductDetailClient({ product, related }: Props) {
             </div>
           </div>
         )}
+
+        <RecentlyViewed currentProductId={product.id} />
       </div>
     </div>
   );

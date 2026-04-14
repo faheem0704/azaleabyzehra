@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Heart, Search, Menu, X, ChevronDown, User, LogOut, Package } from "lucide-react";
+import { ShoppingBag, Heart, Search, Menu, X, ChevronDown, User, LogOut, Package, Settings } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useUIStore } from "@/store/uiStore";
@@ -232,6 +232,14 @@ export default function Header({ categories }: HeaderProps) {
                           >
                             <Package size={14} />
                             My Orders
+                          </Link>
+                          <Link
+                            href="/account"
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-inter text-charcoal hover:text-rose-gold hover:bg-ivory-200 transition-colors"
+                            onClick={() => setIsAccountOpen(false)}
+                          >
+                            <Settings size={14} />
+                            My Account
                           </Link>
                           <button
                             onClick={() => { signOut(); setIsAccountOpen(false); }}
