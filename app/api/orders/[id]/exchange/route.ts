@@ -88,31 +88,31 @@ export async function POST(
     },
   });
 
-  // Atomic swap: decrement new, increment old, update order item
-  await prisma.$transaction([
-    prisma.productVariant.update({
+  // Atomic swap: decrement new variant stock, restore old variant stock, update order item
+  await prisma.$transaction(async (tx) => {
+    await tx.productVariant.update({
       where: { id: newVariant.id },
       data: { stock: { decrement: item.quantity } },
-    }),
-    ...(oldVariant
-      ? [
-          prisma.productVariant.update({
-            where: { id: oldVariant.id },
-            data: { stock: { increment: item.quantity } },
-          }),
-        ]
-      : [
-          // Fallback: if old variant record doesn't exist, increment product-level stock
-          prisma.product.update({
-            where: { id: item.productId },
-            data: { stock: { increment: item.quantity } },
-          }),
-        ]),
-    prisma.orderItem.update({
+    });
+
+    if (oldVariant) {
+      await tx.productVariant.update({
+        where: { id: oldVariant.id },
+        data: { stock: { increment: item.quantity } },
+      });
+    } else {
+      // Fallback: old variant record missing — increment product-level stock
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { increment: item.quantity } },
+      });
+    }
+
+    await tx.orderItem.update({
       where: { id: orderItemId },
       data: { size: newSize.trim(), color: newColor.trim() },
-    }),
-  ]);
+    });
+  });
 
   // Re-sync product.stock to sum of all variant stocks
   const aggregate = await prisma.productVariant.aggregate({
