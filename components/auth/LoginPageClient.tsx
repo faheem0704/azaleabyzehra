@@ -15,7 +15,12 @@ type Step = "login" | "forgot_contact" | "forgot_otp";
 export default function LoginPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const rawCallback = searchParams.get("callbackUrl") || "/";
+  // Guard against redirect loops — never send the user back to /login or /register
+  const callbackUrl =
+    rawCallback.startsWith("/login") || rawCallback.startsWith("/register")
+      ? "/"
+      : rawCallback;
 
   const [step, setStep] = useState<Step>("login");
 
@@ -41,10 +46,10 @@ export default function LoginPageClient() {
       });
       if (result?.error) throw new Error("Incorrect email/phone or password");
       toast.success("Welcome back!");
-      // BUG-23: router.refresh() re-validates the session server-side,
-      // then router.push() navigates without a full page reload.
-      router.refresh();
+      // Push first so navigation begins with the fresh auth cookie already in the browser.
+      // Refresh after so Next.js clears any stale server-component cache on the target page.
       router.push(callbackUrl);
+      router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Sign in failed");
     } finally {
@@ -84,8 +89,8 @@ export default function LoginPageClient() {
       });
       if (result?.error) throw new Error("Invalid or expired code");
       toast.success("Welcome back!");
-      router.refresh();
       router.push(callbackUrl);
+      router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Verification failed");
     } finally {
