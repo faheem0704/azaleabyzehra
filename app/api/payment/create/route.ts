@@ -51,11 +51,14 @@ export async function POST(req: NextRequest) {
       receipt: `abz_${Date.now()}`,
     });
 
+    // Return the same key used to create the order — guarantees no key mismatch
+    // between order creation and checkout initialization regardless of which
+    // env vars are set. NEXT_PUBLIC_RAZORPAY_KEY_ID is no longer needed.
     return NextResponse.json({
       orderId: order.id,
-      amount: total, // authoritative server-calculated amount
+      amount: total,
       currency: order.currency,
-      keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      keyId: process.env.RAZORPAY_KEY_ID,
     });
   } catch (error) {
     console.error("Payment create error:", error);
