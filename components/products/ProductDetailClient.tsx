@@ -14,6 +14,7 @@ import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import ProductCard from "./ProductCard";
 import RecentlyViewed, { trackProductView } from "./RecentlyViewed";
+import SizeGuideModal from "./SizeGuideModal";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -55,6 +56,7 @@ export default function ProductDetailClient({ product, related }: Props) {
     const v = variants.find((v) => v.size === selectedSize && v.color === color);
     return v ? v.stock <= 0 : false;
   };
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"description" | "fabric" | "care" | "reviews">("description");
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
@@ -246,7 +248,12 @@ export default function ProductDetailClient({ product, related }: Props) {
                       <p className="font-inter text-xs tracking-widest uppercase text-charcoal-light">
                         Size: <span className="text-charcoal normal-case tracking-normal font-medium">{selectedSize}</span>
                       </p>
-                      <button className="text-xs font-inter text-rose-gold underline underline-offset-2">Size Guide</button>
+                      <button
+                        onClick={() => setIsSizeGuideOpen(true)}
+                        className="text-xs font-inter text-rose-gold underline underline-offset-2 hover:text-charcoal transition-colors"
+                      >
+                        Size Guide
+                      </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {product.sizes.map((size) => {
@@ -509,6 +516,12 @@ export default function ProductDetailClient({ product, related }: Props) {
 
         <RecentlyViewed currentProductId={product.id} />
       </div>
+
+      <SizeGuideModal
+        isOpen={isSizeGuideOpen}
+        onClose={() => setIsSizeGuideOpen(false)}
+        selectedSize={selectedSize}
+      />
     </div>
   );
 }
