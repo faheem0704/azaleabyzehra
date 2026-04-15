@@ -1,6 +1,9 @@
+export const dynamic = "force-dynamic";
+
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
+import InvoicePrintButtons from "@/components/admin/InvoicePrintButtons";
 
 interface Props {
   params: { id: string };
@@ -29,23 +32,8 @@ export default async function InvoicePage({ params }: Props) {
 
   return (
     <>
-      {/* Print button — hidden when printing */}
-      <div className="no-print fixed top-4 right-4 z-50 flex gap-3">
-        <button
-          onClick={() => window.print()}
-          className="bg-charcoal text-ivory font-inter text-sm px-6 py-2.5 hover:bg-charcoal-dark transition-colors"
-          // eslint-disable-next-line react/no-unknown-property
-          suppressHydrationWarning
-        >
-          Print / Save PDF
-        </button>
-        <a
-          href={`/admin/orders`}
-          className="border border-charcoal text-charcoal font-inter text-sm px-6 py-2.5 hover:bg-ivory-200 transition-colors"
-        >
-          ← Back
-        </a>
-      </div>
+      {/* Print button — client component (onClick cannot live in a server component) */}
+      <InvoicePrintButtons />
 
       <style>{`
         @media print {

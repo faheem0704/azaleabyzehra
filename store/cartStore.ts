@@ -1,6 +1,18 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { CartItem, CartStore } from "@/types";
+import { CartItem, CartStore, AppliedPromo } from "@/types";
+
+// After any cart mutation, check whether the applied promo still meets its minimum
+// order requirement. Returns null (clears promo) if the new subtotal falls below it.
+function revalidatePromo(
+  items: CartItem[],
+  promo: AppliedPromo | null
+): AppliedPromo | null {
+  if (!promo) return null;
+  if (!promo.minOrderAmount) return promo; // no minimum — always valid
+  const newSubtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  return newSubtotal >= promo.minOrderAmount ? promo : null;
+}
 
 export const useCartStore = create<CartStore>()(
   persist(
@@ -20,29 +32,35 @@ export const useCartStore = create<CartStore>()(
             i.color === item.color
         );
 
+        let newItems: CartItem[];
         if (existingIndex !== -1) {
-          const updated = [...items];
-          updated[existingIndex] = {
-            ...updated[existingIndex],
-            quantity: updated[existingIndex].quantity + item.quantity,
+          newItems = [...items];
+          newItems[existingIndex] = {
+            ...newItems[existingIndex],
+            quantity: newItems[existingIndex].quantity + item.quantity,
+            // Always sync to the latest price — prevents stale price doubling
+            price: item.price,
           };
-          set({ items: updated });
         } else {
-          set({
-            items: [
-              ...items,
-              { ...item, id: `${item.productId}-${item.size}-${item.color}-${Date.now()}` },
-            ],
-          });
+          newItems = [
+            ...items,
+            { ...item, id: `${item.productId}-${item.size}-${item.color}-${Date.now()}` },
+          ];
         }
+
+        set({
+          items: newItems,
+          appliedPromo: revalidatePromo(newItems, get().appliedPromo),
+        });
       },
 
       removeItem: (productId, size, color) => {
+        const newItems = get().items.filter(
+          (i) => !(i.productId === productId && i.size === size && i.color === color)
+        );
         set({
-          items: get().items.filter(
-            (i) =>
-              !(i.productId === productId && i.size === size && i.color === color)
-          ),
+          items: newItems,
+          appliedPromo: revalidatePromo(newItems, get().appliedPromo),
         });
       },
 
@@ -51,12 +69,14 @@ export const useCartStore = create<CartStore>()(
           get().removeItem(productId, size, color);
           return;
         }
+        const newItems = get().items.map((i) =>
+          i.productId === productId && i.size === size && i.color === color
+            ? { ...i, quantity }
+            : i
+        );
         set({
-          items: get().items.map((i) =>
-            i.productId === productId && i.size === size && i.color === color
-              ? { ...i, quantity }
-              : i
-          ),
+          items: newItems,
+          appliedPromo: revalidatePromo(newItems, get().appliedPromo),
         });
       },
 

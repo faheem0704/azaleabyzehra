@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       code: promo.code,
       discountPercent: promo.discountPercent,
       maxDiscount: promo.maxDiscount,
+      minOrderAmount: promo.minOrderAmount ?? null,
       discountAmount: Math.round(discountAmount),
       message: promo.maxDiscount
         ? `${promo.discountPercent}% off (up to ₹${promo.maxDiscount.toLocaleString("en-IN")})`

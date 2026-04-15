@@ -120,7 +120,8 @@ export async function POST(req: NextRequest) {
         promo &&
         promo.active &&
         (!promo.expiresAt || new Date() <= promo.expiresAt) &&
-        (!promo.usageLimit || promo.usageCount < promo.usageLimit)
+        (!promo.usageLimit || promo.usageCount < promo.usageLimit) &&
+        (!promo.minOrderAmount || subtotal >= promo.minOrderAmount)
       ) {
         let eligibleSubtotal = subtotal;
         if (promo.productIds.length > 0) {

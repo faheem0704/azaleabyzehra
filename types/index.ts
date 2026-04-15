@@ -137,6 +137,7 @@ export interface AppliedPromo {
   code: string;
   discountPercent: number;
   maxDiscount: number | null;
+  minOrderAmount: number | null;
   discountAmount: number;
   message: string;
 }
