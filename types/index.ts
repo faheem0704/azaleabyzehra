@@ -138,6 +138,7 @@ export interface AppliedPromo {
   discountPercent: number;
   maxDiscount: number | null;
   minOrderAmount: number | null;
+  productIds: string[]; // empty = applies to all products
   discountAmount: number;
   message: string;
 }

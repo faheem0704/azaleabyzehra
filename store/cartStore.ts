@@ -2,16 +2,42 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { CartItem, CartStore, AppliedPromo } from "@/types";
 
-// After any cart mutation, check whether the applied promo still meets its minimum
-// order requirement. Returns null (clears promo) if the new subtotal falls below it.
+// After any cart mutation, fully recalculate the promo discount against the
+// current cart contents. This keeps discountAmount accurate as items are
+// added, removed, or have their quantity/price changed.
+// Returns null if the promo is no longer valid (minimum not met, or no
+// eligible items remain for a product-specific promo).
 function revalidatePromo(
   items: CartItem[],
   promo: AppliedPromo | null
 ): AppliedPromo | null {
   if (!promo) return null;
-  if (!promo.minOrderAmount) return promo; // no minimum — always valid
-  const newSubtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  return newSubtotal >= promo.minOrderAmount ? promo : null;
+
+  const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+  // Clear if subtotal drops below the promo's minimum order amount
+  if (promo.minOrderAmount && subtotal < promo.minOrderAmount) return null;
+
+  // Determine the eligible subtotal:
+  // - empty productIds → applies to entire cart
+  // - non-empty productIds → only the matching products count
+  let eligibleSubtotal = subtotal;
+  if (promo.productIds && promo.productIds.length > 0) {
+    eligibleSubtotal = items
+      .filter((i) => promo.productIds.includes(i.productId))
+      .reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+    // If none of the eligible products remain in the cart, clear the promo
+    if (eligibleSubtotal === 0) return null;
+  }
+
+  // Recalculate discount from scratch with the current eligible subtotal
+  const rawDiscount = (eligibleSubtotal * promo.discountPercent) / 100;
+  const discountAmount = Math.round(
+    promo.maxDiscount ? Math.min(rawDiscount, promo.maxDiscount) : rawDiscount
+  );
+
+  return { ...promo, discountAmount };
 }
 
 export const useCartStore = create<CartStore>()(

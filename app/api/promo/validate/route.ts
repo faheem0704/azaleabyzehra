@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
       discountPercent: promo.discountPercent,
       maxDiscount: promo.maxDiscount,
       minOrderAmount: promo.minOrderAmount ?? null,
+      productIds: promo.productIds, // needed for client-side discount recalculation on cart changes
       discountAmount: Math.round(discountAmount),
       message: promo.maxDiscount
         ? `${promo.discountPercent}% off (up to ₹${promo.maxDiscount.toLocaleString("en-IN")})`
