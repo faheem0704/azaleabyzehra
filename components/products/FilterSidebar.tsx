@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, X, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
@@ -22,6 +22,8 @@ interface FilterSidebarProps {
   filters: Filters;
   onFilterChange: (filters: Partial<Filters>) => void;
   onReset: () => void;
+  mobileOpen: boolean;
+  onMobileOpenChange: (open: boolean) => void;
 }
 
 function AccordionSection({ title, children }: { title: string; children: React.ReactNode }) {
@@ -55,8 +57,7 @@ function AccordionSection({ title, children }: { title: string; children: React.
   );
 }
 
-export default function FilterSidebar({ filters, onFilterChange, onReset }: FilterSidebarProps) {
-  const [mobileOpen, setMobileOpen] = useState(false);
+export default function FilterSidebar({ filters, onFilterChange, onReset, mobileOpen, onMobileOpenChange }: FilterSidebarProps) {
 
 
 
@@ -246,17 +247,6 @@ export default function FilterSidebar({ filters, onFilterChange, onReset }: Filt
         </div>
       </aside>
 
-      {/* Mobile Filter Button */}
-      <div className="lg:hidden mb-6">
-        <button
-          onClick={() => setMobileOpen(true)}
-          className="flex items-center gap-2 border border-ivory-200 px-4 py-2.5 font-inter text-sm text-charcoal hover:border-rose-gold hover:text-rose-gold transition-colors"
-        >
-          <SlidersHorizontal size={16} />
-          Filters {activeCount > 0 && `(${activeCount})`}
-        </button>
-      </div>
-
       {/* Mobile Filter Drawer */}
       <AnimatePresence>
         {mobileOpen && (
@@ -265,7 +255,7 @@ export default function FilterSidebar({ filters, onFilterChange, onReset }: Filt
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setMobileOpen(false)}
+              onClick={() => onMobileOpenChange(false)}
               className="fixed inset-0 z-[70] bg-charcoal/40 backdrop-blur-sm"
             />
             <motion.div
@@ -277,14 +267,14 @@ export default function FilterSidebar({ filters, onFilterChange, onReset }: Filt
             >
               <div className="flex items-center justify-between p-6 border-b border-ivory-200">
                 <h3 className="font-playfair text-xl text-charcoal">Filters</h3>
-                <button onClick={() => setMobileOpen(false)}>
+                <button onClick={() => onMobileOpenChange(false)}>
                   <X size={20} className="text-charcoal" />
                 </button>
               </div>
               <div className="p-6">
                 <SidebarContent />
                 <button
-                  onClick={() => setMobileOpen(false)}
+                  onClick={() => onMobileOpenChange(false)}
                   className="mt-6 w-full btn-primary"
                 >
                   Apply Filters

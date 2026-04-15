@@ -80,7 +80,7 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
               src={product.images[imageIndex] || product.images[0]}
               alt={product.name}
               fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className="object-cover transition-transform duration-700 group-hover:scale-105"
             />
           ) : (
@@ -162,12 +162,12 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
         </div>
 
         {/* Info */}
-        <div className="mt-4 space-y-1.5 px-1">
-          <h3 className="font-inter text-sm text-charcoal leading-snug group-hover:text-rose-gold transition-colors duration-200 line-clamp-2">
+        <div className="mt-2 lg:mt-4 space-y-1 lg:space-y-1.5 px-1">
+          <h3 className="font-inter text-xs lg:text-sm text-charcoal leading-snug group-hover:text-rose-gold transition-colors duration-200 line-clamp-2">
             {product.name}
           </h3>
           <div className="flex items-center gap-2">
-            <span className="font-playfair text-base text-charcoal">{formatPrice(product.price)}</span>
+            <span className="font-playfair text-sm lg:text-base text-charcoal">{formatPrice(product.price)}</span>
             {product.compareAtPrice && (
               <span className="text-xs font-inter text-mauve line-through">
                 {formatPrice(product.compareAtPrice)}
