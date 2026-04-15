@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendOTPEmail } from "@/lib/resend";
-import { sendOTPSMS } from "@/lib/twilio";
 import { generateOTP } from "@/lib/utils";
 import { checkRateLimit } from "@/lib/rateLimit";
 
@@ -15,11 +14,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Contact is required" }, { status: 400 });
     }
 
-    // BUG-20: normalise email to lowercase so OTP records match auth lookups
     const isEmail = (rawContact as string).includes("@");
-    const contact = isEmail
-      ? (rawContact as string).trim().toLowerCase()
-      : (rawContact as string).trim();
+
+    // SMS is not available — phone users must use email for OTP verification
+    if (!isEmail) {
+      return NextResponse.json(
+        { error: "OTP verification is only available via email. Please use your email address." },
+        { status: 400 }
+      );
+    }
+
+    // Normalise email to lowercase so OTP records match auth lookups
+    const contact = (rawContact as string).trim().toLowerCase();
 
     // Max 3 OTPs per contact per 10 minutes
     if (!checkRateLimit(`otp:${contact}`, 3, 10 * 60 * 1000)) {
@@ -42,16 +48,9 @@ export async function POST(req: NextRequest) {
       data: { contact, otp, expiresAt },
     });
 
-    if (isEmail) {
-      await sendOTPEmail(contact, otp);
-    } else {
-      await sendOTPSMS(contact, otp);
-    }
+    await sendOTPEmail(contact, otp);
 
-    // BUG-33 (intentional): we always return success even if the contact doesn't exist
-    // in the database. This prevents account enumeration — an attacker must not be able
-    // to determine whether a given email/phone has a registered account by probing this
-    // endpoint. The OTP simply won't match anything valid if the contact is unknown.
+    // Always return success to prevent account enumeration
     return NextResponse.json({ message: "OTP sent successfully" });
   } catch (error) {
     console.error("OTP send error:", error);
