@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   // BUG-16: raised limit from 8 → 50 to support full cart validation
   const products = await prisma.product.findMany({
     where: { id: { in: ids.slice(0, 50) }, isDeleted: false },
-    include: { category: true },
+    select: { id: true, name: true, price: true, images: true, slug: true, sizes: true, colors: true, stock: true },
   });
 
   // Return in the same order as the ids array

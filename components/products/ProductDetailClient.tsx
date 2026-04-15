@@ -44,7 +44,7 @@ export default function ProductDetailClient({ product, related }: Props) {
 
   // Is a given size out of stock across all its colors?
   const isSizeOutOfStock = (size: string): boolean => {
-    if (variants.length === 0) return false;
+    if (variants.length === 0) return product.stock <= 0; // no variants — fall back to product-level stock
     const sizeVariants = variants.filter((v) => v.size === size);
     if (sizeVariants.length === 0) return false;
     return sizeVariants.every((v) => v.stock <= 0);

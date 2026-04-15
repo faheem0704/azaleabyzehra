@@ -8,16 +8,27 @@ export async function POST(req: NextRequest) {
   try {
     const { items, promoCode } = await req.json();
 
-    // ── BUG-03: recalculate total server-side so Razorpay charge always
-    //    matches the amount that POST /api/orders will also calculate. ──────
     const settings = await prisma.settings.findFirst().catch(() => null);
     const shippingFee = settings?.shippingFee ?? 199;
     const freeShippingThreshold = settings?.freeShippingThreshold ?? 2999;
 
-    const subtotal = (items as { price: number; quantity: number }[]).reduce(
-      (s, i) => s + i.price * i.quantity,
-      0
+    // Fetch DB prices — never trust client-sent prices.
+    // A manipulated cart could otherwise pay ₹1 and receive a PAID order.
+    const productIds = Array.from(
+      new Set((items as { productId: string }[]).map((i) => i.productId))
     );
+    const dbProducts = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, price: true },
+    });
+    const dbPriceMap = new Map(dbProducts.map((p) => [p.id, p.price]));
+
+    const authorizedItems = (items as { productId: string; quantity: number }[]).map((item) => ({
+      ...item,
+      price: dbPriceMap.get(item.productId) ?? 0,
+    }));
+
+    const subtotal = authorizedItems.reduce((s, i) => s + i.price * i.quantity, 0);
     const shipping = subtotal >= freeShippingThreshold ? 0 : shippingFee;
 
     let discount = 0;
@@ -30,11 +41,12 @@ export async function POST(req: NextRequest) {
         promo &&
         promo.active &&
         (!promo.expiresAt || new Date() <= promo.expiresAt) &&
-        (!promo.usageLimit || promo.usageCount < promo.usageLimit)
+        (!promo.usageLimit || promo.usageCount < promo.usageLimit) &&
+        (!promo.minOrderAmount || subtotal >= promo.minOrderAmount)
       ) {
         let eligible = subtotal;
         if (promo.productIds.length > 0) {
-          eligible = (items as { productId: string; price: number; quantity: number }[])
+          eligible = authorizedItems
             .filter((i) => promo.productIds.includes(i.productId))
             .reduce((s, i) => s + i.price * i.quantity, 0);
         }

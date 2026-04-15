@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShoppingBag, Heart, Search, Menu, X, ChevronDown, User, LogOut, Package, Settings, LayoutDashboard } from "lucide-react";
@@ -16,9 +17,11 @@ interface HeaderProps {
 }
 
 export default function Header({ categories }: HeaderProps) {
+  const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
   const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
   const cartCount = useCartStore((s) => s.totalItems());
@@ -44,6 +47,18 @@ export default function Header({ categories }: HeaderProps) {
     document.body.style.overflow = isMobileMenuOpen || isSearchOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [isMobileMenuOpen, isSearchOpen]);
+
+  // Close account dropdown on click outside
+  useEffect(() => {
+    if (!isAccountOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setIsAccountOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isAccountOpen]);
 
   const navLinks = [
     { label: "New Arrivals", href: "/new-arrivals" },
@@ -200,7 +215,7 @@ export default function Header({ categories }: HeaderProps) {
               </button>
 
               {/* Account */}
-              <div className="relative hidden lg:block">
+              <div ref={accountRef} className="relative hidden lg:block">
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   onClick={() => setIsAccountOpen(!isAccountOpen)}
@@ -217,7 +232,6 @@ export default function Header({ categories }: HeaderProps) {
                       exit={{ opacity: 0, y: 8 }}
                       transition={{ duration: 0.2 }}
                       className="absolute right-0 top-full mt-2 w-48 bg-ivory border border-ivory-200 shadow-lg py-2"
-                      onMouseLeave={() => setIsAccountOpen(false)}
                     >
                       {session ? (
                         <>
@@ -330,7 +344,8 @@ export default function Header({ categories }: HeaderProps) {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && searchQuery.trim()) {
-                      window.location.href = `/products?search=${encodeURIComponent(searchQuery)}`;
+                      closeSearch();
+                      router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
                     }
                     if (e.key === "Escape") closeSearch();
                   }}
