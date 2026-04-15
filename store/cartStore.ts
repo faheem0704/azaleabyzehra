@@ -80,7 +80,12 @@ export const useCartStore = create<CartStore>()(
         });
       },
 
-      setItems: (items) => set({ items }),
+      // setItems also revalidates the promo — covers the price-refresh path
+      // where CartDrawer or CheckoutPage update prices after an admin change.
+      setItems: (items) => set({
+        items,
+        appliedPromo: revalidatePromo(items, get().appliedPromo),
+      }),
       clearCart: () => set({ items: [], appliedPromo: null }),
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),

@@ -99,8 +99,28 @@ export async function POST(req: NextRequest) {
       resolvedAddress = addressRecord;
     }
 
+    // ── Server-authoritative prices — NEVER trust client-sent prices ──────
+    // Fetch actual prices from DB so a manipulated client payload cannot
+    // change the order total or discount calculation.
+    const productIds = Array.from(
+      new Set((items as { productId: string }[]).map((i) => i.productId))
+    );
+    const dbProducts = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, price: true },
+    });
+    const dbPriceMap = new Map(dbProducts.map((p) => [p.id, p.price]));
+
+    // Build authorizedItems — same shape as client items but with DB prices
+    const authorizedItems = (
+      items as { productId: string; quantity: number; size: string; color: string; price: number }[]
+    ).map((item) => ({
+      ...item,
+      price: dbPriceMap.get(item.productId) ?? item.price, // fallback: product not found edge case
+    }));
+
     // ── Subtotal & shipping ────────────────────────────────────────────────
-    const subtotal = (items as { price: number; quantity: number }[]).reduce(
+    const subtotal = authorizedItems.reduce(
       (s, i) => s + i.price * i.quantity,
       0
     );
@@ -125,7 +145,7 @@ export async function POST(req: NextRequest) {
       ) {
         let eligibleSubtotal = subtotal;
         if (promo.productIds.length > 0) {
-          eligibleSubtotal = (items as { productId: string; price: number; quantity: number }[])
+          eligibleSubtotal = authorizedItems
             .filter((i) => promo.productIds.includes(i.productId))
             .reduce((s, i) => s + i.price * i.quantity, 0);
         }
@@ -148,7 +168,7 @@ export async function POST(req: NextRequest) {
     type VariantSnapshot = { id: string; stock: number; sku: string | null };
     const variantMap = new Map<string, VariantSnapshot>();
 
-    for (const item of items as { productId: string; quantity: number; size: string; color: string }[]) {
+    for (const item of authorizedItems) {
       const key = `${item.productId}:${item.size}:${item.color}`;
       const variant = await prisma.productVariant
         .findUnique({
@@ -195,18 +215,12 @@ export async function POST(req: NextRequest) {
         paymentStatus: paymentId ? "PAID" : "PENDING",
         paymentGateway: paymentGateway || null,
         items: {
-          create: (items as {
-            productId: string;
-            quantity: number;
-            size: string;
-            color: string;
-            price: number;
-          }[]).map((item) => ({
+          create: authorizedItems.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
             size: item.size,
             color: item.color,
-            price: item.price,
+            price: item.price, // DB-authoritative price — not client-sent
             // Snapshot the SKU at order time — remains accurate even if variant SKU changes later
             sku: variantMap.get(`${item.productId}:${item.size}:${item.color}`)?.sku ?? null,
           })),
@@ -229,7 +243,7 @@ export async function POST(req: NextRequest) {
     // ── Decrement stock (BUG-15: floored at 0) ────────────────────────────
     // Reuse variantMap built during stock check — no second DB round-trip per item.
     await Promise.all(
-      (items as { productId: string; quantity: number; size: string; color: string }[]).map(async (item) => {
+      authorizedItems.map(async (item) => {
         const variant = variantMap.get(`${item.productId}:${item.size}:${item.color}`) ?? null;
 
         if (variant) {

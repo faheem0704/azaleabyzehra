@@ -31,7 +31,7 @@ declare global {
 export default function CheckoutPageClient() {
   const router = useRouter();
   const { data: session } = useSession();
-  const { items, totalPrice, clearCart, appliedPromo, setPromo } = useCartStore();
+  const { items, totalPrice, clearCart, appliedPromo, setPromo, setItems } = useCartStore();
 
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
@@ -76,6 +76,41 @@ export default function CheckoutPageClient() {
       .then((d) => { setShippingFee(d.shippingFee); setFreeShippingThreshold(d.freeShippingThreshold); })
       .catch(() => {});
   }, []);
+
+  // On mount: refresh all cart item prices from the server so the checkout total
+  // is always accurate. If a price changed, update the cart store (which also
+  // re-validates the promo via setItems → revalidatePromo).
+  useEffect(() => {
+    if (items.length === 0) return;
+    const ids = Array.from(new Set(items.map((i) => i.productId)));
+    fetch(`/api/products/batch?ids=${ids.join(",")}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((products: { id: string; price: number }[] | null) => {
+        if (!products) return;
+        const priceMap = new Map(products.map((p) => [p.id, p.price]));
+        const refreshed = items.map((item) => {
+          const fresh = priceMap.get(item.productId);
+          return fresh !== undefined && fresh !== item.price ? { ...item, price: fresh } : item;
+        });
+        const pricesChanged = refreshed.some((r, idx) => r.price !== items[idx].price);
+        if (!pricesChanged) return;
+        const hadPromo = !!appliedPromo;
+        setItems(refreshed); // also revalidates promo via revalidatePromo inside setItems
+        toast("Prices have been updated to reflect current rates.", { icon: "ℹ️" });
+        // After setItems runs, check if the store cleared the promo
+        // We do this by comparing — if promo was active and subtotal now below minimum, it'll be gone
+        if (hadPromo) {
+          // Use a microtask so the store state has settled
+          Promise.resolve().then(() => {
+            const updatedPromo = useCartStore.getState().appliedPromo;
+            if (!updatedPromo) {
+              toast.error("Promo code removed — subtotal no longer meets the minimum requirement.");
+            }
+          });
+        }
+      })
+      .catch(() => {}); // silent fail — server validates prices at order creation anyway
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (items.length === 0) {
     return (
