@@ -46,6 +46,9 @@ export default function CheckoutPageClient() {
   // Pincode autofill
   const [pincodeLoading, setPincodeLoading] = useState(false);
 
+  // Price gate — confirmed fresh prices before allowing step 2
+  const [priceCheckLoading, setPriceCheckLoading] = useState(false);
+
   useEffect(() => {
     if (!session?.user) return;
     fetch("/api/account/addresses")
@@ -127,6 +130,61 @@ export default function CheckoutPageClient() {
   const shipping = subtotal >= freeShippingThreshold ? 0 : shippingFee;
   const discount = appliedPromo?.discountAmount ?? 0;
   const total = Math.max(0, subtotal + shipping - discount);
+
+  // Verify all cart prices are current before moving to the payment step.
+  // If a price changed while the customer was filling the address form, block
+  // the advance, update the cart, and ask them to review — never silently
+  // charge a stale price. On network failure we let them through (server is
+  // the authoritative final check at order creation anyway).
+  const handleContinueToPayment = async () => {
+    if (!address.name || !address.phone || !address.line1 || !address.city || !address.state || !address.pincode) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
+    setPriceCheckLoading(true);
+    try {
+      const ids = Array.from(new Set(items.map((i) => i.productId)));
+      const res = await fetch(`/api/products/batch?ids=${ids.join(",")}`);
+      if (!res.ok) {
+        // API unavailable — proceed; server validates at order creation
+        setStep(2);
+        return;
+      }
+      const products: { id: string; price: number }[] = await res.json();
+      const priceMap = new Map(products.map((p) => [p.id, p.price]));
+
+      const refreshed = items.map((item) => {
+        const fresh = priceMap.get(item.productId);
+        return fresh !== undefined && fresh !== item.price ? { ...item, price: fresh } : item;
+      });
+
+      const pricesChanged = refreshed.some((r, idx) => r.price !== items[idx].price);
+
+      if (pricesChanged) {
+        const hadPromo = !!appliedPromo;
+        setItems(refreshed); // revalidates promo automatically via revalidatePromo
+        toast.error("Product prices have been updated. Please review your order total before proceeding.");
+        if (hadPromo) {
+          Promise.resolve().then(() => {
+            if (!useCartStore.getState().appliedPromo) {
+              toast.error("Your promo code has been removed — subtotal no longer meets the minimum requirement.");
+            }
+          });
+        }
+        // Do NOT advance — customer must see and acknowledge the updated total
+        return;
+      }
+
+      // All prices confirmed current — safe to proceed to payment
+      setStep(2);
+    } catch {
+      // Network error — proceed; server is the final price authority
+      setStep(2);
+    } finally {
+      setPriceCheckLoading(false);
+    }
+  };
 
   const lookupPincode = async (pin: string) => {
     if (!/^\d{6}$/.test(pin)) return;
@@ -383,12 +441,8 @@ export default function CheckoutPageClient() {
                   </div>
 
                   <Button
-                    onClick={() => {
-                      if (!address.name || !address.phone || !address.line1 || !address.city || !address.state || !address.pincode) {
-                        toast.error("Please fill all required fields"); return;
-                      }
-                      setStep(2);
-                    }}
+                    onClick={handleContinueToPayment}
+                    loading={priceCheckLoading}
                     className="w-full mt-4"
                   >
                     Continue to Payment
