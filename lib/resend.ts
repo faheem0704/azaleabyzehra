@@ -111,6 +111,39 @@ export async function sendLowStockAlert(
   });
 }
 
+export async function sendNewOrderAlert(
+  adminEmail: string,
+  order: {
+    id: string;
+    customerName: string;
+    customerContact: string;
+    totalAmount: number;
+    itemCount: number;
+  }
+): Promise<void> {
+  await getResend().emails.send({
+    from: FROM,
+    to: adminEmail,
+    subject: `New Order #${order.id.slice(-8).toUpperCase()} — ₹${order.totalAmount.toLocaleString()} | Azalea by Zehra`,
+    html: `
+      <div style="font-family: Georgia, serif; max-width: 480px; margin: 0 auto; padding: 40px 24px; background: #FAF6EE;">
+        <h1 style="font-size: 24px; color: #3D3D3D;">Azalea by Zehra — New Order</h1>
+        <div style="background: #fff; border: 1px solid #F5EDE0; border-radius: 12px; padding: 24px; margin: 24px 0;">
+          <p style="color: #A8929E; font-size: 13px; margin: 0 0 4px 0;">Order ID</p>
+          <p style="color: #3D3D3D; font-size: 18px; font-weight: 700; margin: 0 0 16px 0;">#${order.id.slice(-8).toUpperCase()}</p>
+          <p style="color: #A8929E; font-size: 13px; margin: 0 0 4px 0;">Customer</p>
+          <p style="color: #3D3D3D; font-size: 15px; margin: 0 0 16px 0;">${order.customerName} · ${order.customerContact}</p>
+          <p style="color: #A8929E; font-size: 13px; margin: 0 0 4px 0;">Items</p>
+          <p style="color: #3D3D3D; font-size: 15px; margin: 0 0 16px 0;">${order.itemCount} item${order.itemCount === 1 ? "" : "s"}</p>
+          <p style="color: #A8929E; font-size: 13px; margin: 0 0 4px 0;">Total</p>
+          <p style="color: #C9956C; font-size: 24px; font-weight: 700; margin: 0;">₹${order.totalAmount.toLocaleString()}</p>
+        </div>
+        <a href="${APP_URL}/admin/orders" style="display: inline-block; background: #C9956C; color: #fff; padding: 12px 24px; font-size: 14px; text-decoration: none; border-radius: 4px;">View in Admin Panel →</a>
+      </div>
+    `,
+  });
+}
+
 export async function sendShipmentEmail(
   email: string,
   orderId: string,

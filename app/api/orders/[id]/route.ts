@@ -96,11 +96,18 @@ export async function PUT(
 
   const { status, trackingId } = await req.json();
 
+  // RETURNED: also set paymentStatus to REFUNDED
+  const extraData: Record<string, unknown> = {};
+  if (status === "RETURNED") {
+    extraData.paymentStatus = "REFUNDED";
+  }
+
   const order = await prisma.order.update({
     where: { id: params.id },
     data: {
       status,
       ...(trackingId ? { trackingId } : {}),
+      ...extraData,
     },
     include: {
       user: true,

@@ -9,11 +9,11 @@ export default async function AdminOrdersPage() {
     select: {
       id: true, status: true, totalAmount: true, discountAmount: true,
       promoCode: true, paymentStatus: true, paymentGateway: true,
-      trackingId: true, createdAt: true,
+      trackingId: true, createdAt: true, guestEmail: true,
       user: { select: { name: true, email: true, phone: true } },
       items: {
         select: {
-          id: true, quantity: true, size: true, color: true, price: true,
+          id: true, quantity: true, size: true, color: true, price: true, sku: true,
           product: { select: { name: true, images: true } },
         },
       },
@@ -25,7 +25,7 @@ export default async function AdminOrdersPage() {
       },
     },
     orderBy: { createdAt: "desc" },
-    take: 50, // 50 is enough for the admin view; older orders are filtered by status
+    take: 200, // enough for filters (status/payment/date) to work client-side
   });
 
   return <AdminOrdersClient orders={orders as any} />;

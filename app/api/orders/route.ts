@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { sendOrderConfirmationEmail } from "@/lib/resend";
+import { sendOrderConfirmationEmail, sendNewOrderAlert } from "@/lib/resend";
 import { sendOrderConfirmationSMS } from "@/lib/twilio";
 
 export async function GET(req: NextRequest) {
@@ -313,6 +313,17 @@ export async function POST(req: NextRequest) {
 
     if (contactEmail) await sendOrderConfirmationEmail(contactEmail, orderData).catch(console.error);
     if (contactPhone) await sendOrderConfirmationSMS(contactPhone, order.id).catch(console.error);
+
+    // Admin new-order notification
+    if (adminEmail) {
+      sendNewOrderAlert(adminEmail, {
+        id: order.id,
+        customerName: order.user?.name || order.user?.email || order.guestEmail || "Guest",
+        customerContact: order.user?.email || order.user?.phone || "—",
+        totalAmount: order.totalAmount,
+        itemCount: order.items.length,
+      }).catch(console.error);
+    }
 
     return NextResponse.json(order, { status: 201 });
   } catch (error) {
