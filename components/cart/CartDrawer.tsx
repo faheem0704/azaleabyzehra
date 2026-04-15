@@ -14,32 +14,42 @@ export default function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, totalPrice, totalItems, appliedPromo, setPromo, setItems } =
     useCartStore();
 
-  // stock map: productId → available stock (used to cap quantity buttons)
+  // stock map: "productId:size:color" → variant stock (caps quantity buttons)
   const [stockMap, setStockMap] = useState<Map<string, number>>(new Map());
 
-  // Every time the cart opens, fetch fresh prices + stock from the server.
+  // Every time the cart opens, fetch fresh prices AND variant-level stock.
   useEffect(() => {
     if (!isOpen || items.length === 0) return;
+
+    // 1. Refresh prices
     const ids = Array.from(new Set(items.map((i) => i.productId)));
     fetch(`/api/products/batch?ids=${ids.join(",")}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((products: { id: string; price: number; stock: number }[] | null) => {
+      .then((products: { id: string; price: number }[] | null) => {
         if (!products) return;
         const priceMap = new Map(products.map((p) => [p.id, p.price]));
-        const newStockMap = new Map(products.map((p) => [p.id, p.stock]));
-        setStockMap(newStockMap);
         const refreshed = items.map((item) => {
           const fresh = priceMap.get(item.productId);
-          return fresh !== undefined && fresh !== item.price
-            ? { ...item, price: fresh }
-            : item;
+          return fresh !== undefined && fresh !== item.price ? { ...item, price: fresh } : item;
         });
-        // Only call setItems if at least one price actually changed
-        if (refreshed.some((r, i) => r.price !== items[i].price)) {
-          setItems(refreshed);
-        }
+        if (refreshed.some((r, i) => r.price !== items[i].price)) setItems(refreshed);
       })
-      .catch(() => {}); // silent fail — stale price is better than a broken cart
+      .catch(() => {});
+
+    // 2. Fetch variant-level stock so + is capped at the correct size/color quantity
+    fetch("/api/products/variant-stock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        variants: items.map((i) => ({ productId: i.productId, size: i.size, color: i.color })),
+      }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { productId: string; size: string; color: string; stock: number }[] | null) => {
+        if (!data) return;
+        setStockMap(new Map(data.map((v) => [`${v.productId}:${v.size}:${v.color}`, v.stock])));
+      })
+      .catch(() => {});
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [promoInput, setPromoInput] = useState("");
@@ -183,7 +193,7 @@ export default function CartDrawer() {
                               onClick={() =>
                                 updateQuantity(item.productId, item.size, item.color, item.quantity + 1)
                               }
-                              disabled={item.quantity >= (stockMap.get(item.productId) ?? 10)}
+                              disabled={item.quantity >= (stockMap.get(`${item.productId}:${item.size}:${item.color}`) ?? 10)}
                               className="w-7 h-7 flex items-center justify-center text-charcoal hover:text-rose-gold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                             >
                               <Plus size={12} />
