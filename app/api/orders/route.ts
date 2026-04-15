@@ -141,16 +141,23 @@ export async function POST(req: NextRequest) {
     const finalTotal = Math.max(0, subtotal + shipping - validatedDiscount);
 
     // ── BUG-01 + BUG-06: stock availability check before creating anything ─
+    // Build a variant map here and reuse it for order creation + decrement —
+    // avoids fetching the same variants a second time later.
     const stockErrors: string[] = [];
+    type VariantSnapshot = { id: string; stock: number; sku: string | null };
+    const variantMap = new Map<string, VariantSnapshot>();
 
     for (const item of items as { productId: string; quantity: number; size: string; color: string }[]) {
+      const key = `${item.productId}:${item.size}:${item.color}`;
       const variant = await prisma.productVariant
         .findUnique({
           where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color } },
+          select: { id: true, stock: true, sku: true },
         })
         .catch(() => null);
 
       if (variant) {
+        variantMap.set(key, variant);
         if (variant.stock < item.quantity) {
           const prod = await prisma.product.findUnique({ where: { id: item.productId }, select: { name: true } });
           stockErrors.push(
@@ -199,6 +206,8 @@ export async function POST(req: NextRequest) {
             size: item.size,
             color: item.color,
             price: item.price,
+            // Snapshot the SKU at order time — remains accurate even if variant SKU changes later
+            sku: variantMap.get(`${item.productId}:${item.size}:${item.color}`)?.sku ?? null,
           })),
         },
       },
@@ -217,13 +226,10 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Decrement stock (BUG-15: floored at 0) ────────────────────────────
+    // Reuse variantMap built during stock check — no second DB round-trip per item.
     await Promise.all(
       (items as { productId: string; quantity: number; size: string; color: string }[]).map(async (item) => {
-        const variant = await prisma.productVariant
-          .findUnique({
-            where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color } },
-          })
-          .catch(() => null);
+        const variant = variantMap.get(`${item.productId}:${item.size}:${item.color}`) ?? null;
 
         if (variant) {
           const newStock = Math.max(0, variant.stock - item.quantity); // BUG-15: floor at 0

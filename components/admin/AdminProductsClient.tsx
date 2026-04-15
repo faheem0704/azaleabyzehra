@@ -431,6 +431,14 @@ export default function AdminProductsClient({ products: initial, categories, low
                                         onChange={(e) => setVariantStock(prev => ({ ...prev, [k]: parseInt(e.target.value) || 0 }))}
                                         className="w-full border border-ivory-200 px-2 py-1.5 text-center text-sm font-inter focus:outline-none focus:border-rose-gold"
                                       />
+                                      <input
+                                        type="text"
+                                        value={variantSku[k] ?? ""}
+                                        onChange={(e) => setVariantSku(prev => ({ ...prev, [k]: e.target.value.toUpperCase() }))}
+                                        placeholder="SKU"
+                                        title="Stock Keeping Unit — must be globally unique"
+                                        className="w-full mt-1 border border-ivory-200 px-2 py-1 text-center text-[11px] font-inter focus:outline-none focus:border-rose-gold text-charcoal-light placeholder:text-ivory-200 tracking-wider"
+                                      />
                                     </td>
                                   );
                                 })}

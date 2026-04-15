@@ -30,6 +30,33 @@ export async function PUT(
     variants: { size: string; color: string; stock: number; sku?: string }[];
   };
 
+  // Validate SKU uniqueness before touching the DB — each non-empty SKU must not
+  // already exist on a DIFFERENT variant (i.e. different productId or size/color).
+  const nonEmptySkus = variants.filter((v) => v.sku?.trim());
+  for (const v of nonEmptySkus) {
+    const normalizedSku = v.sku!.trim().toUpperCase();
+    v.sku = normalizedSku; // normalise to uppercase in-place
+    const conflict = await prisma.productVariant.findFirst({
+      where: {
+        sku: normalizedSku,
+        NOT: {
+          AND: [
+            { productId: params.id },
+            { size: v.size },
+            { color: v.color },
+          ],
+        },
+      },
+      select: { id: true, productId: true, size: true, color: true },
+    });
+    if (conflict) {
+      return NextResponse.json(
+        { error: `SKU "${normalizedSku}" is already assigned to another variant. SKUs must be globally unique.` },
+        { status: 409 }
+      );
+    }
+  }
+
   // BUG-19: was NOT { AND: [...] } which is always TRUE (deletes everything).
   // Correct logic: delete variants whose (size, color) pair is NOT in the new list.
   await prisma.productVariant.deleteMany({
@@ -41,15 +68,26 @@ export async function PUT(
     },
   });
 
-  const upserted = await Promise.all(
-    variants.map((v) =>
-      prisma.productVariant.upsert({
-        where: { productId_size_color: { productId: params.id, size: v.size, color: v.color } },
-        update: { stock: v.stock, sku: v.sku ?? null },
-        create: { productId: params.id, size: v.size, color: v.color, stock: v.stock, sku: v.sku ?? null },
-      })
-    )
-  );
+  let upserted;
+  try {
+    upserted = await Promise.all(
+      variants.map((v) =>
+        prisma.productVariant.upsert({
+          where: { productId_size_color: { productId: params.id, size: v.size, color: v.color } },
+          update: { stock: v.stock, sku: v.sku?.trim().toUpperCase() || null },
+          create: { productId: params.id, size: v.size, color: v.color, stock: v.stock, sku: v.sku?.trim().toUpperCase() || null },
+        })
+      )
+    );
+  } catch (err: any) {
+    if (err?.code === "P2002") {
+      return NextResponse.json(
+        { error: "One or more SKUs are already in use. SKUs must be globally unique." },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
 
   // Sync product.stock to total of all variants
   const total = variants.reduce((s, v) => s + v.stock, 0);

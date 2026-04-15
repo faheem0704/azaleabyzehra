@@ -108,11 +108,28 @@ export async function POST(req: NextRequest) {
       // Handle variants column: "S:Red:10:SKU1|M:Blue:5:"
       if (variantsRaw) {
         const variantsList = variantsRaw.split("|").filter(Boolean).map((v) => {
-          const [size, color, stockStr, sku] = v.split(":");
-          return { size: size || "", color: color || "", stock: parseInt(stockStr) || 0, sku: sku || null };
+          const [size, color, stockStr, skuRaw] = v.split(":");
+          const sku = skuRaw?.trim().toUpperCase() || null;
+          return { size: size?.trim() || "", color: color?.trim() || "", stock: parseInt(stockStr) || 0, sku };
         }).filter((v) => v.size && v.color);
 
         for (const v of variantsList) {
+          // Check SKU uniqueness before upsert — a duplicate SKU is a row-level error,
+          // but we still import the variant without the SKU rather than skipping it.
+          if (v.sku) {
+            const conflict = await prisma.productVariant.findFirst({
+              where: {
+                sku: v.sku,
+                NOT: { AND: [{ productId }, { size: v.size }, { color: v.color }] },
+              },
+              select: { id: true },
+            });
+            if (conflict) {
+              errors.push(`Row ${i + 1}: SKU "${v.sku}" for ${v.size}/${v.color} is already in use — imported without SKU`);
+              v.sku = null; // clear conflicting SKU, still import stock
+            }
+          }
+
           await prisma.productVariant.upsert({
             where: { productId_size_color: { productId, size: v.size, color: v.color } },
             update: { stock: v.stock, sku: v.sku },

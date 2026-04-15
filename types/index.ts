@@ -103,6 +103,7 @@ export interface OrderItem {
   size: string;
   color: string;
   price: number;
+  sku: string | null;
 }
 
 export interface Order {

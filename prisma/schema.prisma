@@ -126,6 +126,8 @@ model ProductVariant {
   updatedAt DateTime @updatedAt
 
   @@unique([productId, size, color])
+  @@unique([sku])          // globally unique SKU; PostgreSQL allows multiple NULLs
+  @@index([sku])           // fast SKU lookups / search
   @@map("product_variants")
 }
 
@@ -216,13 +218,14 @@ model Order {
 }
 
 model OrderItem {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   orderId   String
   productId String
   quantity  Int
   size      String
   color     String
   price     Float
+  sku       String? // snapshot of variant SKU at time of order — never changes even if variant SKU is later edited
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])

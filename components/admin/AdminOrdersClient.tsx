@@ -167,6 +167,11 @@ export default function AdminOrdersClient({ orders: initialOrders }: { orders: O
                             <div>
                               <p className="font-inter text-xs text-charcoal">{item.product?.name}</p>
                               <p className="font-inter text-xs text-mauve">{item.size} · {item.color} × {item.quantity}</p>
+                              {item.sku && (
+                                <p className="font-inter text-[10px] text-charcoal-light tracking-wider mt-0.5">
+                                  SKU: {item.sku}
+                                </p>
+                              )}
                             </div>
                           </div>
                         ))}

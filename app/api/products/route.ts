@@ -48,6 +48,8 @@ export async function GET(req: NextRequest) {
     where.OR = [
       { name: { contains: search, mode: "insensitive" } },
       { description: { contains: search, mode: "insensitive" } },
+      // Allow searching by SKU (useful for admin reorder / inventory lookup)
+      { variants: { some: { sku: { contains: search, mode: "insensitive" } } } },
     ];
   }
 
