@@ -1,80 +1,94 @@
-// SMS delivery via MSG91 (Indian SMS gateway — better delivery + cheaper than Twilio for India)
+// SMS delivery via 2Factor.in (simple Indian SMS gateway, no DLT registration needed)
 // File kept as twilio.ts so existing imports don't need to change.
-// API docs: https://docs.msg91.com/reference/send-transactional-sms
+// API docs: https://2factor.in/API/
 
-const MSG91_API = "https://api.msg91.com/api/v5/flow/";
+// 2Factor uses a simple GET API for OTP and a transactional SMS API for notifications.
+// OTP API has built-in template — no setup needed other than the API key.
+// For order/shipment SMS, uses the transactional route with a shared sender ID.
 
-function getAuthKey(): string {
-  const key = process.env.MSG91_AUTH_KEY;
-  if (!key) throw new Error("MSG91_AUTH_KEY not configured");
+const BASE = "https://2factor.in/API/V1";
+
+function getApiKey(): string {
+  const key = process.env.TWOFACTOR_API_KEY;
+  if (!key) throw new Error("TWOFACTOR_API_KEY not configured");
   return key;
 }
 
-// MSG91 expects: 919876543210 (country code + number, no + or spaces)
+// 2Factor expects Indian numbers without country code (10 digits)
+// or with +91 prefix. Normalise to 10-digit format.
 function formatMobile(phone: string): string {
   const digits = phone.replace(/\D/g, "");
-  if (digits.length === 12 && digits.startsWith("91")) return digits; // already has country code
-  if (digits.length === 10) return `91${digits}`; // Indian number without country code
-  return digits; // international — pass through
+  if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
+  if (digits.length === 10) return digits;
+  return digits; // pass through for non-Indian numbers
 }
 
-async function sendTemplate(
-  templateId: string,
-  mobile: string,
-  variables: Record<string, string>
-): Promise<void> {
-  const res = await fetch(MSG91_API, {
-    method: "POST",
-    headers: {
-      authkey: getAuthKey(),
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      template_id: templateId,
-      short_url: "0",
-      recipients: [{ mobiles: formatMobile(mobile), ...variables }],
-    }),
-  });
+// OTP SMS — 2Factor has a dedicated OTP API with built-in delivery and retry.
+// No template registration needed. Message format is fixed:
+// "<OTP> is your One Time Password(OTP) for Azalea by Zehra. OTP is valid for 10 minutes."
+// To use a custom message, set TWOFACTOR_OTP_TEMPLATE_NAME in env vars
+// (requires creating a template in 2Factor dashboard).
+export async function sendOTPSMS(phone: string, otp: string): Promise<void> {
+  const apiKey = getApiKey();
+  const mobile = formatMobile(phone);
+  const templateName = process.env.TWOFACTOR_OTP_TEMPLATE_NAME || ""; // optional custom template
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`MSG91 error ${res.status}: ${text}`);
+  const url = templateName
+    ? `${BASE}/${apiKey}/SMS/${mobile}/${otp}/${templateName}`
+    : `${BASE}/${apiKey}/SMS/${mobile}/${otp}`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (data.Status !== "Success") {
+    throw new Error(`2Factor OTP error: ${data.Details || JSON.stringify(data)}`);
   }
 }
 
-// Template (register in MSG91 dashboard):
-// "Your Azalea by Zehra verification code is: ##otp##. Valid for 10 minutes."
-// Variable name: otp
-export async function sendOTPSMS(phone: string, otp: string): Promise<void> {
-  const templateId = process.env.MSG91_OTP_TEMPLATE_ID;
-  if (!templateId) throw new Error("MSG91_OTP_TEMPLATE_ID not configured");
-  await sendTemplate(templateId, phone, { otp });
+// Transactional SMS — used for order confirmation and shipment notifications.
+// Requires creating templates in 2Factor dashboard under Transactional SMS.
+// Set TWOFACTOR_ORDER_TEMPLATE and TWOFACTOR_SHIPMENT_TEMPLATE env vars
+// with the exact template name from your 2Factor dashboard.
+async function sendTransactionalSMS(phone: string, message: string): Promise<void> {
+  const apiKey = getApiKey();
+  const mobile = formatMobile(phone);
+
+  const url = `${BASE}/${apiKey}/ADDON_SERVICES/SEND/TSMS`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      From: process.env.TWOFACTOR_SENDER_ID || "AZALEA",
+      To: mobile,
+      Msg: message,
+    }).toString(),
+  });
+
+  const data = await res.json();
+  if (data.Status !== "Success") {
+    throw new Error(`2Factor SMS error: ${data.Details || JSON.stringify(data)}`);
+  }
 }
 
-// Template (register in MSG91 dashboard):
-// "Azalea by Zehra: Your order ##order_id## has been placed! We will notify you when it ships. Track at azaleabyzehra.com/orders"
-// Variable name: order_id
 export async function sendOrderConfirmationSMS(
   phone: string,
   orderId: string
 ): Promise<void> {
-  const templateId = process.env.MSG91_ORDER_TEMPLATE_ID;
-  if (!templateId) throw new Error("MSG91_ORDER_TEMPLATE_ID not configured");
-  await sendTemplate(templateId, phone, { order_id: orderId.slice(-8).toUpperCase() });
+  const shortId = orderId.slice(-8).toUpperCase();
+  await sendTransactionalSMS(
+    phone,
+    `Azalea by Zehra: Your order #${shortId} has been placed! We will notify you when it ships. Track at azaleabyzehra.com/orders`
+  );
 }
 
-// Template (register in MSG91 dashboard):
-// "Azalea by Zehra: Your order ##order_id## has shipped! Tracking ID: ##tracking_id##. Track at azaleabyzehra.com/orders"
-// Variable names: order_id, tracking_id
 export async function sendShipmentSMS(
   phone: string,
   orderId: string,
   trackingId: string
 ): Promise<void> {
-  const templateId = process.env.MSG91_SHIPMENT_TEMPLATE_ID;
-  if (!templateId) throw new Error("MSG91_SHIPMENT_TEMPLATE_ID not configured");
-  await sendTemplate(templateId, phone, {
-    order_id: orderId.slice(-8).toUpperCase(),
-    tracking_id: trackingId,
-  });
+  const shortId = orderId.slice(-8).toUpperCase();
+  await sendTransactionalSMS(
+    phone,
+    `Azalea by Zehra: Your order #${shortId} has shipped! Tracking ID: ${trackingId}. Track at azaleabyzehra.com/orders`
+  );
 }
