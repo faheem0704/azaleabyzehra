@@ -14,17 +14,20 @@ export default function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQuantity, totalPrice, totalItems, appliedPromo, setPromo, setItems } =
     useCartStore();
 
-  // Every time the cart opens, fetch fresh prices from the server and sync them
-  // into the store. This means the + / - buttons always operate on the current price,
-  // not whatever was stored in localStorage when the item was first added.
+  // stock map: productId → available stock (used to cap quantity buttons)
+  const [stockMap, setStockMap] = useState<Map<string, number>>(new Map());
+
+  // Every time the cart opens, fetch fresh prices + stock from the server.
   useEffect(() => {
     if (!isOpen || items.length === 0) return;
     const ids = Array.from(new Set(items.map((i) => i.productId)));
     fetch(`/api/products/batch?ids=${ids.join(",")}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((products: { id: string; price: number }[] | null) => {
+      .then((products: { id: string; price: number; stock: number }[] | null) => {
         if (!products) return;
         const priceMap = new Map(products.map((p) => [p.id, p.price]));
+        const newStockMap = new Map(products.map((p) => [p.id, p.stock]));
+        setStockMap(newStockMap);
         const refreshed = items.map((item) => {
           const fresh = priceMap.get(item.productId);
           return fresh !== undefined && fresh !== item.price
@@ -176,12 +179,11 @@ export default function CartDrawer() {
                             <span className="w-8 text-center text-sm font-inter text-charcoal">
                               {item.quantity}
                             </span>
-                            {/* BUG-27: cap quantity at 10 — server validates real stock at checkout */}
                             <button
                               onClick={() =>
                                 updateQuantity(item.productId, item.size, item.color, item.quantity + 1)
                               }
-                              disabled={item.quantity >= 10}
+                              disabled={item.quantity >= (stockMap.get(item.productId) ?? 10)}
                               className="w-7 h-7 flex items-center justify-center text-charcoal hover:text-rose-gold transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                             >
                               <Plus size={12} />

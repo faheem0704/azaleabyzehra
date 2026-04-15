@@ -57,6 +57,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No items in order" }, { status: 400 });
     }
 
+    // Prevent paymentId reuse — one payment ID can only create one order
+    if (paymentId) {
+      const duplicate = await prisma.order.findFirst({
+        where: { paymentId },
+        select: { id: true },
+      });
+      if (duplicate) {
+        return NextResponse.json({ error: "This payment has already been used" }, { status: 400 });
+      }
+    }
+
     // ── Settings (server-side, never trust client) ─────────────────────────
     const settings = await prisma.settings.findFirst().catch(() => null);
     const shippingFee = settings?.shippingFee ?? 199;
