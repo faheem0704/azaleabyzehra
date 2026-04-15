@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Heart, Search, Menu, X, ChevronDown, User, LogOut, Package, Settings } from "lucide-react";
+import { ShoppingBag, Heart, Search, Menu, X, ChevronDown, User, LogOut, Package, Settings, LayoutDashboard } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useUIStore } from "@/store/uiStore";
@@ -20,6 +20,7 @@ export default function Header({ categories }: HeaderProps) {
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const { data: session } = useSession();
+  const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
   const cartCount = useCartStore((s) => s.totalItems());
   const wishlistCount = useWishlistStore((s) => s.totalItems());
   const { isMobileMenuOpen, isSearchOpen, openMobileMenu, closeMobileMenu, openSearch, closeSearch } = useUIStore();
@@ -224,23 +225,42 @@ export default function Header({ categories }: HeaderProps) {
                             <p className="text-xs font-inter text-charcoal-light truncate">
                               {session.user?.name || session.user?.email}
                             </p>
+                            {isAdmin && (
+                              <span className="mt-1 inline-block text-[10px] font-inter tracking-widest uppercase text-rose-gold">
+                                Admin
+                              </span>
+                            )}
                           </div>
-                          <Link
-                            href="/orders"
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-inter text-charcoal hover:text-rose-gold hover:bg-ivory-200 transition-colors"
-                            onClick={() => setIsAccountOpen(false)}
-                          >
-                            <Package size={14} />
-                            My Orders
-                          </Link>
-                          <Link
-                            href="/account"
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-inter text-charcoal hover:text-rose-gold hover:bg-ivory-200 transition-colors"
-                            onClick={() => setIsAccountOpen(false)}
-                          >
-                            <Settings size={14} />
-                            My Account
-                          </Link>
+                          {isAdmin ? (
+                            // Admin sees a shortcut to the admin panel, not customer links
+                            <Link
+                              href="/admin"
+                              className="flex items-center gap-2 px-4 py-2 text-sm font-inter text-charcoal hover:text-rose-gold hover:bg-ivory-200 transition-colors"
+                              onClick={() => setIsAccountOpen(false)}
+                            >
+                              <LayoutDashboard size={14} />
+                              Admin Panel
+                            </Link>
+                          ) : (
+                            <>
+                              <Link
+                                href="/orders"
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-inter text-charcoal hover:text-rose-gold hover:bg-ivory-200 transition-colors"
+                                onClick={() => setIsAccountOpen(false)}
+                              >
+                                <Package size={14} />
+                                My Orders
+                              </Link>
+                              <Link
+                                href="/account"
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-inter text-charcoal hover:text-rose-gold hover:bg-ivory-200 transition-colors"
+                                onClick={() => setIsAccountOpen(false)}
+                              >
+                                <Settings size={14} />
+                                My Account
+                              </Link>
+                            </>
+                          )}
                           <button
                             onClick={() => { signOut(); setIsAccountOpen(false); }}
                             className="flex items-center gap-2 w-full px-4 py-2 text-sm font-inter text-charcoal hover:text-rose-gold hover:bg-ivory-200 transition-colors"
@@ -375,9 +395,33 @@ export default function Header({ categories }: HeaderProps) {
               <div className="mt-8 pt-8 border-t border-ivory-200">
                 {session ? (
                   <>
-                    <p className="text-xs font-inter text-mauve mb-4">
+                    <p className="text-xs font-inter text-mauve mb-1">
                       {session.user?.name || session.user?.email}
                     </p>
+                    {isAdmin && (
+                      <span className="inline-block text-[10px] font-inter tracking-widest uppercase text-rose-gold mb-4">Admin</span>
+                    )}
+                    {isAdmin ? (
+                      <Link
+                        href="/admin"
+                        onClick={closeMobileMenu}
+                        className="flex items-center gap-2 text-sm font-inter text-charcoal hover:text-rose-gold mb-3"
+                      >
+                        <LayoutDashboard size={16} />
+                        Admin Panel
+                      </Link>
+                    ) : (
+                      <>
+                        <Link href="/orders" onClick={closeMobileMenu} className="flex items-center gap-2 text-sm font-inter text-charcoal hover:text-rose-gold mb-3">
+                          <Package size={16} />
+                          My Orders
+                        </Link>
+                        <Link href="/account" onClick={closeMobileMenu} className="flex items-center gap-2 text-sm font-inter text-charcoal hover:text-rose-gold mb-3">
+                          <Settings size={16} />
+                          My Account
+                        </Link>
+                      </>
+                    )}
                     <button
                       onClick={() => { signOut(); closeMobileMenu(); }}
                       className="flex items-center gap-2 text-sm font-inter text-charcoal hover:text-rose-gold"
