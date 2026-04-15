@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ShoppingBag, Trash2, Plus, Minus, Tag } from "lucide-react";
 import Image from "next/image";
@@ -11,8 +11,33 @@ import Button from "@/components/ui/Button";
 import toast from "react-hot-toast";
 
 export default function CartDrawer() {
-  const { items, isOpen, closeCart, removeItem, updateQuantity, totalPrice, totalItems, appliedPromo, setPromo } =
+  const { items, isOpen, closeCart, removeItem, updateQuantity, totalPrice, totalItems, appliedPromo, setPromo, setItems } =
     useCartStore();
+
+  // Every time the cart opens, fetch fresh prices from the server and sync them
+  // into the store. This means the + / - buttons always operate on the current price,
+  // not whatever was stored in localStorage when the item was first added.
+  useEffect(() => {
+    if (!isOpen || items.length === 0) return;
+    const ids = Array.from(new Set(items.map((i) => i.productId)));
+    fetch(`/api/products/batch?ids=${ids.join(",")}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((products: { id: string; price: number }[] | null) => {
+        if (!products) return;
+        const priceMap = new Map(products.map((p) => [p.id, p.price]));
+        const refreshed = items.map((item) => {
+          const fresh = priceMap.get(item.productId);
+          return fresh !== undefined && fresh !== item.price
+            ? { ...item, price: fresh }
+            : item;
+        });
+        // Only call setItems if at least one price actually changed
+        if (refreshed.some((r, i) => r.price !== items[i].price)) {
+          setItems(refreshed);
+        }
+      })
+      .catch(() => {}); // silent fail — stale price is better than a broken cart
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [promoInput, setPromoInput] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
