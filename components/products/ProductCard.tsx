@@ -27,6 +27,19 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
+
+    // If there are multiple size/color combinations we can't know which variant
+    // has stock without fetching variant data. Open Quick View so the customer
+    // can pick explicitly. Only do a silent Quick Add when there is exactly one
+    // combination (unambiguous).
+    const hasMultipleCombos = product.sizes.length > 1 || product.colors.length > 1;
+    if (hasMultipleCombos) {
+      if (onQuickView) {
+        onQuickView(product);
+      }
+      return;
+    }
+
     const defaultSize = product.sizes[0];
     const defaultColor = product.colors[0];
 
@@ -130,7 +143,11 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
                   className="flex-1 flex items-center justify-center gap-2 bg-charcoal text-ivory py-2.5 text-xs font-inter tracking-widest uppercase hover:bg-rose-gold transition-all duration-300 disabled:opacity-50"
                 >
                   <ShoppingBag size={14} />
-                  {product.stock === 0 ? "Sold Out" : "Quick Add"}
+                  {product.stock === 0
+                    ? "Sold Out"
+                    : product.sizes.length > 1 || product.colors.length > 1
+                    ? "Quick View"
+                    : "Quick Add"}
                 </button>
                 {onQuickView && (
                   <button

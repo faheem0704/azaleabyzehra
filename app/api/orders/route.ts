@@ -251,53 +251,78 @@ export async function POST(req: NextRequest) {
         .catch(console.error); // Non-fatal — order already committed
     }
 
-    // ── Decrement stock (BUG-15: floored at 0) ────────────────────────────
-    // Reuse variantMap built during stock check — no second DB round-trip per item.
+    // ── Decrement stock — two-phase to avoid race condition ──────────────
+    // Phase 1: update every variant stock in parallel (each targets a different row).
+    // Phase 2: re-aggregate and sync product.stock per unique product AFTER all
+    //          variants are settled — prevents concurrent writes to the same product
+    //          row producing a wrong total when two variants of the same product
+    //          are in the same order.
+
+    // Phase 1: variant decrements (safe to parallelise — distinct rows)
+    const updatedVariants = new Map<string, number>(); // key → new stock
     await Promise.all(
       authorizedItems.map(async (item) => {
-        const variant = variantMap.get(`${item.productId}:${item.size}:${item.color}`) ?? null;
-
+        const key = `${item.productId}:${item.size}:${item.color}`;
+        const variant = variantMap.get(key) ?? null;
         if (variant) {
-          const newStock = Math.max(0, variant.stock - item.quantity); // BUG-15: floor at 0
+          const newStock = Math.max(0, variant.stock - item.quantity);
           const updated = await prisma.productVariant
             .update({ where: { id: variant.id }, data: { stock: newStock } })
             .catch(() => null);
-
-          // Sync product-level stock to sum of all variants
-          const agg = await prisma.productVariant.aggregate({
-            where: { productId: item.productId },
-            _sum: { stock: true },
-          });
-          await prisma.product
-            .update({ where: { id: item.productId }, data: { stock: agg._sum.stock ?? 0 } })
-            .catch(() => {});
-
-          // Low-stock alert
-          if (updated && updated.stock <= lowStockThreshold && adminEmail) {
-            const prod = await prisma.product.findUnique({
-              where: { id: item.productId },
-              select: { name: true },
-            });
-            const { sendLowStockAlert } = await import("@/lib/resend");
-            sendLowStockAlert(adminEmail, {
-              productName: prod?.name ?? item.productId,
-              size: item.size,
-              color: item.color,
-              remaining: updated.stock,
-            }).catch(console.error);
-          }
-        } else {
-          const prod = await prisma.product.findUnique({
-            where: { id: item.productId },
-            select: { stock: true },
-          });
-          const newStock = Math.max(0, (prod?.stock ?? 0) - item.quantity); // BUG-15: floor at 0
-          await prisma.product
-            .update({ where: { id: item.productId }, data: { stock: newStock } })
-            .catch(() => {});
+          if (updated) updatedVariants.set(key, updated.stock);
         }
+        // Products without variants are handled in phase 2 using decrement
       })
     );
+
+    // Phase 2: sync product.stock for every affected product (sequential per product)
+    const uniqueProductIds = Array.from(new Set(authorizedItems.map((i) => i.productId)));
+    for (const productId of uniqueProductIds) {
+      const itemsForProduct = authorizedItems.filter((i) => i.productId === productId);
+      const hasVariants = itemsForProduct.some((i) =>
+        variantMap.has(`${i.productId}:${i.size}:${i.color}`)
+      );
+
+      if (hasVariants) {
+        // Re-aggregate after all variant updates are complete
+        const agg = await prisma.productVariant.aggregate({
+          where: { productId },
+          _sum: { stock: true },
+        });
+        await prisma.product
+          .update({ where: { id: productId }, data: { stock: agg._sum.stock ?? 0 } })
+          .catch(() => {});
+      } else {
+        // No variant records — decrement product.stock directly
+        const totalQty = itemsForProduct.reduce((s, i) => s + i.quantity, 0);
+        const prod = await prisma.product.findUnique({ where: { id: productId }, select: { stock: true } });
+        const newStock = Math.max(0, (prod?.stock ?? 0) - totalQty);
+        await prisma.product
+          .update({ where: { id: productId }, data: { stock: newStock } })
+          .catch(() => {});
+      }
+    }
+
+    // Phase 3: low-stock alerts (non-blocking)
+    if (adminEmail) {
+      const { sendLowStockAlert } = await import("@/lib/resend");
+      for (const item of authorizedItems) {
+        const key = `${item.productId}:${item.size}:${item.color}`;
+        const newStock = updatedVariants.get(key);
+        if (newStock !== undefined && newStock <= lowStockThreshold) {
+          const prod = await prisma.product.findUnique({
+            where: { id: item.productId },
+            select: { name: true },
+          });
+          sendLowStockAlert(adminEmail, {
+            productName: prod?.name ?? item.productId,
+            size: item.size,
+            color: item.color,
+            remaining: newStock,
+          }).catch(console.error);
+        }
+      }
+    }
 
     // ── Confirmation notifications ─────────────────────────────────────────
     const contactEmail = order.user?.email;

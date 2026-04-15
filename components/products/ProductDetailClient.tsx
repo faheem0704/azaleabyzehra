@@ -52,7 +52,7 @@ export default function ProductDetailClient({ product, related }: Props) {
 
   // Is a given color out of stock for the currently selected size?
   const isColorOutOfStock = (color: string): boolean => {
-    if (variants.length === 0) return false;
+    if (variants.length === 0) return product.stock <= 0; // no variants — fall back to product-level stock
     const v = variants.find((v) => v.size === selectedSize && v.color === color);
     return v ? v.stock <= 0 : false;
   };
