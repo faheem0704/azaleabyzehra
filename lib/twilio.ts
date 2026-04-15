@@ -1,47 +1,80 @@
-import twilio from "twilio";
+// SMS delivery via MSG91 (Indian SMS gateway — better delivery + cheaper than Twilio for India)
+// File kept as twilio.ts so existing imports don't need to change.
+// API docs: https://docs.msg91.com/reference/send-transactional-sms
 
-// Lazy client — only created when env vars are present and a function is called.
-// Avoids module-load-time crash when Twilio env vars aren't set.
-function getClient() {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  if (!sid || !token) throw new Error("Twilio credentials not configured");
-  return twilio(sid, token);
+const MSG91_API = "https://api.msg91.com/api/v5/flow/";
+
+function getAuthKey(): string {
+  const key = process.env.MSG91_AUTH_KEY;
+  if (!key) throw new Error("MSG91_AUTH_KEY not configured");
+  return key;
 }
 
-const FROM = () => {
-  const num = process.env.TWILIO_PHONE_NUMBER;
-  if (!num) throw new Error("TWILIO_PHONE_NUMBER not configured");
-  return num;
-};
+// MSG91 expects: 919876543210 (country code + number, no + or spaces)
+function formatMobile(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) return digits; // already has country code
+  if (digits.length === 10) return `91${digits}`; // Indian number without country code
+  return digits; // international — pass through
+}
 
-export async function sendOTPSMS(phone: string, otp: string): Promise<void> {
-  await getClient().messages.create({
-    body: `Your Azalea by Zehra verification code is: ${otp}. Valid for 10 minutes.`,
-    from: FROM(),
-    to: phone,
+async function sendTemplate(
+  templateId: string,
+  mobile: string,
+  variables: Record<string, string>
+): Promise<void> {
+  const res = await fetch(MSG91_API, {
+    method: "POST",
+    headers: {
+      authkey: getAuthKey(),
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      template_id: templateId,
+      short_url: "0",
+      recipients: [{ mobiles: formatMobile(mobile), ...variables }],
+    }),
   });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`MSG91 error ${res.status}: ${text}`);
+  }
 }
 
+// Template (register in MSG91 dashboard):
+// "Your Azalea by Zehra verification code is: ##otp##. Valid for 10 minutes."
+// Variable name: otp
+export async function sendOTPSMS(phone: string, otp: string): Promise<void> {
+  const templateId = process.env.MSG91_OTP_TEMPLATE_ID;
+  if (!templateId) throw new Error("MSG91_OTP_TEMPLATE_ID not configured");
+  await sendTemplate(templateId, phone, { otp });
+}
+
+// Template (register in MSG91 dashboard):
+// "Azalea by Zehra: Your order ##order_id## has been placed! We will notify you when it ships. Track at azaleabyzehra.com/orders"
+// Variable name: order_id
 export async function sendOrderConfirmationSMS(
   phone: string,
   orderId: string
 ): Promise<void> {
-  await getClient().messages.create({
-    body: `Azalea by Zehra: Your order #${orderId.slice(-8).toUpperCase()} has been placed! We'll notify you when it ships. Track at azaleabyzehra.com/orders`,
-    from: FROM(),
-    to: phone,
-  });
+  const templateId = process.env.MSG91_ORDER_TEMPLATE_ID;
+  if (!templateId) throw new Error("MSG91_ORDER_TEMPLATE_ID not configured");
+  await sendTemplate(templateId, phone, { order_id: orderId.slice(-8).toUpperCase() });
 }
 
+// Template (register in MSG91 dashboard):
+// "Azalea by Zehra: Your order ##order_id## has shipped! Tracking ID: ##tracking_id##. Track at azaleabyzehra.com/orders"
+// Variable names: order_id, tracking_id
 export async function sendShipmentSMS(
   phone: string,
   orderId: string,
   trackingId: string
 ): Promise<void> {
-  await getClient().messages.create({
-    body: `Azalea by Zehra: Your order #${orderId.slice(-8).toUpperCase()} has shipped! Tracking ID: ${trackingId}. Track at azaleabyzehra.com/orders`,
-    from: FROM(),
-    to: phone,
+  const templateId = process.env.MSG91_SHIPMENT_TEMPLATE_ID;
+  if (!templateId) throw new Error("MSG91_SHIPMENT_TEMPLATE_ID not configured");
+  await sendTemplate(templateId, phone, {
+    order_id: orderId.slice(-8).toUpperCase(),
+    tracking_id: trackingId,
   });
 }
