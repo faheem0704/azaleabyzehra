@@ -93,7 +93,7 @@ export default function OrdersPageClient({ orders: initial }: { orders: any[] })
   };
 
   // Unique sizes from available variants
-  const availableSizes = [...new Set(exchangeVariants.map((v) => v.size))];
+  const availableSizes = Array.from(new Set(exchangeVariants.map((v) => v.size)));
 
   // Colors available for the currently selected size (sufficient stock)
   const availableColors = exchangeVariants
