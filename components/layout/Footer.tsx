@@ -76,9 +76,10 @@ export default async function Footer() {
               {[
                 { label: "About Us", href: "/about" },
                 { label: "Help & FAQ", href: "/help" },
-                { label: "Shipping Policy", href: "/help#shipping" },
-                { label: "Returns & Exchanges", href: "/help#returns" },
-                { label: "Size Guide", href: "/help#sizing" },
+                { label: "Shipping Policy", href: "/policies/shipping" },
+                { label: "Returns & Exchanges", href: "/policies/returns" },
+                { label: "Refund Policy", href: "/policies/refunds" },
+                { label: "Terms of Service", href: "/policies/terms" },
                 { label: "Privacy Policy", href: "/privacy" },
               ].map((link) => (
                 <li key={link.href}>
