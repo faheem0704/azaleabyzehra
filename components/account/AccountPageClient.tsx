@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Plus, Trash2, Star, MapPin } from "lucide-react";
+import { Plus, Trash2, Star, MapPin, Loader } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import toast from "react-hot-toast";
@@ -20,6 +20,7 @@ export default function AccountPageClient({ user }: { user: { name?: string; ema
   const [form, setForm] = useState({ ...EMPTY });
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pincodeLoading, setPincodeLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/account/addresses").then((r) => r.json()).then(setAddresses).catch(() => {});
@@ -29,6 +30,23 @@ export default function AccountPageClient({ user }: { user: { name?: string; ema
     value: form[key] || "",
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, [key]: e.target.value })),
   });
+
+  const lookupPincode = async (pin: string) => {
+    if (!/^\d{6}$/.test(pin)) return;
+    setPincodeLoading(true);
+    try {
+      const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+      const data = await res.json();
+      if (data?.[0]?.Status === "Success" && data[0].PostOffice?.length > 0) {
+        const po = data[0].PostOffice[0];
+        setForm((prev) => ({ ...prev, city: po.District, state: po.State }));
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setPincodeLoading(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +135,25 @@ export default function AccountPageClient({ user }: { user: { name?: string; ema
               <div className="grid grid-cols-3 gap-4">
                 <Input label="City *" {...f("city")} required placeholder="Mumbai" />
                 <Input label="State *" {...f("state")} required placeholder="Maharashtra" />
-                <Input label="Pincode *" {...f("pincode")} required placeholder="400001" />
+                <div className="relative">
+                  <Input
+                    label="Pincode *"
+                    value={form.pincode || ""}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      setForm((p) => ({ ...p, pincode: val }));
+                      if (val.length === 6) lookupPincode(val);
+                    }}
+                    required
+                    placeholder="400001"
+                    maxLength={6}
+                  />
+                  {pincodeLoading && (
+                    <div className="absolute right-3 bottom-2.5">
+                      <Loader size={14} className="text-rose-gold animate-spin" />
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex gap-3">
                 <Button type="submit" loading={saving} size="sm">Save Address</Button>

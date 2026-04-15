@@ -10,17 +10,17 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { Check, Tag, X, MapPin } from "lucide-react";
+import { Check, Tag, X, MapPin, Loader } from "lucide-react";
 import { Address } from "@/types";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2;
 
 interface AddressForm {
   name: string; phone: string; line1: string;
   line2: string; city: string; state: string; pincode: string;
 }
 
-const STEPS = ["Address", "Payment", "Review"];
+const STEPS = ["Address", "Payment"];
 
 declare global {
   interface Window {
@@ -42,6 +42,9 @@ export default function CheckoutPageClient() {
   // Saved addresses
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+
+  // Pincode autofill
+  const [pincodeLoading, setPincodeLoading] = useState(false);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -89,6 +92,23 @@ export default function CheckoutPageClient() {
   const shipping = subtotal >= freeShippingThreshold ? 0 : shippingFee;
   const discount = appliedPromo?.discountAmount ?? 0;
   const total = Math.max(0, subtotal + shipping - discount);
+
+  const lookupPincode = async (pin: string) => {
+    if (!/^\d{6}$/.test(pin)) return;
+    setPincodeLoading(true);
+    try {
+      const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+      const data = await res.json();
+      if (data?.[0]?.Status === "Success" && data[0].PostOffice?.length > 0) {
+        const po = data[0].PostOffice[0];
+        setAddress((prev) => ({ ...prev, city: po.District, state: po.State }));
+      }
+    } catch {
+      // silently fail — user can still type city/state manually
+    } finally {
+      setPincodeLoading(false);
+    }
+  };
 
   const applyPromo = async () => {
     if (!promoInput.trim()) return;
@@ -301,11 +321,32 @@ export default function CheckoutPageClient() {
                   </div>
                   <Input label="Address Line 1 *" value={address.line1} onChange={(e) => setAddress(p => ({ ...p, line1: e.target.value }))} required placeholder="House No., Street" />
                   <Input label="Address Line 2" value={address.line2} onChange={(e) => setAddress(p => ({ ...p, line2: e.target.value }))} placeholder="Area, Landmark (optional)" />
+
                   <div className="grid grid-cols-3 gap-4">
                     <Input label="City *" value={address.city} onChange={(e) => setAddress(p => ({ ...p, city: e.target.value }))} required placeholder="Mumbai" />
                     <Input label="State *" value={address.state} onChange={(e) => setAddress(p => ({ ...p, state: e.target.value }))} required placeholder="Maharashtra" />
-                    <Input label="Pincode *" value={address.pincode} onChange={(e) => setAddress(p => ({ ...p, pincode: e.target.value }))} required placeholder="400001" />
+                    {/* Pincode — auto-fills city & state via India Post API */}
+                    <div className="relative">
+                      <Input
+                        label="Pincode *"
+                        value={address.pincode}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                          setAddress(p => ({ ...p, pincode: val }));
+                          if (val.length === 6) lookupPincode(val);
+                        }}
+                        required
+                        placeholder="400001"
+                        maxLength={6}
+                      />
+                      {pincodeLoading && (
+                        <div className="absolute right-3 bottom-2.5">
+                          <Loader size={14} className="text-rose-gold animate-spin" />
+                        </div>
+                      )}
+                    </div>
                   </div>
+
                   <Button
                     onClick={() => {
                       if (!address.name || !address.phone || !address.line1 || !address.city || !address.state || !address.pincode) {
@@ -323,45 +364,21 @@ export default function CheckoutPageClient() {
               {/* Step 2: Payment */}
               {step === 2 && (
                 <motion.div key="payment" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                  <h2 className="font-playfair text-2xl text-charcoal">Payment Method</h2>
-                  <div className="space-y-4">
-                    <div className="border border-rose-gold bg-rose-gold/5 p-5">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-inter text-sm font-medium text-charcoal">Pay Online</h3>
-                        <span className="text-xs font-inter text-mauve">Razorpay · Cards, UPI, Wallets</span>
-                      </div>
-                      <Button onClick={handleRazorpayPayment} loading={loading} className="w-full">
-                        Pay {formatPrice(total)} — Secure Checkout
-                      </Button>
+                  <h2 className="font-playfair text-2xl text-charcoal">Payment</h2>
+                  <div className="border border-rose-gold bg-rose-gold/5 p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-inter text-sm font-medium text-charcoal">Secure Online Payment</h3>
+                      <span className="text-xs font-inter text-mauve">Cards · UPI · Net Banking · Wallets</span>
                     </div>
-                    <div className="border border-ivory-200 p-5">
-                      <h3 className="font-inter text-sm font-medium text-charcoal mb-2">Cash on Delivery</h3>
-                      <p className="font-inter text-xs text-mauve mb-4">Pay when your order arrives. Available across India.</p>
-                      <Button variant="outline" onClick={() => setStep(3)} className="w-full">
-                        Continue with Cash on Delivery
-                      </Button>
-                    </div>
+                    <p className="font-inter text-xs text-charcoal-light mb-4">
+                      Delivering to: <span className="text-charcoal font-medium">{address.name}</span> · {address.city}, {address.state} {address.pincode}
+                    </p>
+                    <Button onClick={handleRazorpayPayment} loading={loading} className="w-full">
+                      Pay {formatPrice(total)} — Razorpay
+                    </Button>
                   </div>
                   <button onClick={() => setStep(1)} className="font-inter text-sm text-charcoal-light hover:text-charcoal transition-colors">
                     ← Back to Address
-                  </button>
-                </motion.div>
-              )}
-
-              {/* Step 3: Review */}
-              {step === 3 && (
-                <motion.div key="review" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-                  <h2 className="font-playfair text-2xl text-charcoal">Review Your Order</h2>
-                  <div className="border border-ivory-200 p-5 space-y-2">
-                    <h3 className="font-inter text-xs tracking-widest uppercase text-charcoal-light mb-3">Delivery Address</h3>
-                    <p className="font-inter text-sm text-charcoal">{address.name} · {address.phone}</p>
-                    <p className="font-inter text-sm text-charcoal-light">{address.line1}{address.line2 ? `, ${address.line2}` : ""}, {address.city}, {address.state} {address.pincode}</p>
-                  </div>
-                  <Button onClick={() => placeOrder()} loading={loading} className="w-full">
-                    Place Order (Cash on Delivery)
-                  </Button>
-                  <button onClick={() => setStep(2)} className="font-inter text-sm text-charcoal-light hover:text-charcoal transition-colors">
-                    ← Back to Payment
                   </button>
                 </motion.div>
               )}

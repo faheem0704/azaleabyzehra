@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
+import { ArrowLeftRight, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 const STATUS_COLORS: Record<string, "default" | "warning" | "success" | "danger"> = {
@@ -14,9 +16,29 @@ const STATUS_COLORS: Record<string, "default" | "warning" | "success" | "danger"
   CANCELLED: "danger",
 };
 
+interface Variant { size: string; color: string; stock: number; }
+
+interface ExchangeTarget {
+  orderId: string;
+  itemId: string;
+  productId: string;
+  currentSize: string;
+  currentColor: string;
+  quantity: number;
+  productName: string;
+}
+
 export default function OrdersPageClient({ orders: initial }: { orders: any[] }) {
   const [orders, setOrders] = useState(initial);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+  // Exchange state
+  const [exchangeTarget, setExchangeTarget] = useState<ExchangeTarget | null>(null);
+  const [exchangeVariants, setExchangeVariants] = useState<Variant[]>([]);
+  const [variantsLoading, setVariantsLoading] = useState(false);
+  const [exchangeSize, setExchangeSize] = useState("");
+  const [exchangeColor, setExchangeColor] = useState("");
+  const [exchangeLoading, setExchangeLoading] = useState(false);
 
   const handleCancel = async (orderId: string) => {
     if (!confirm("Cancel this order? This cannot be undone.")) return;
@@ -31,6 +53,92 @@ export default function OrdersPageClient({ orders: initial }: { orders: any[] })
       toast.error(err instanceof Error ? err.message : "Failed to cancel");
     } finally {
       setCancellingId(null);
+    }
+  };
+
+  const openExchange = async (orderId: string, item: any) => {
+    setVariantsLoading(true);
+    setExchangeTarget({
+      orderId,
+      itemId: item.id,
+      productId: item.product.id,
+      currentSize: item.size,
+      currentColor: item.color,
+      quantity: item.quantity,
+      productName: item.product.name,
+    });
+    setExchangeSize(item.size);
+    setExchangeColor(item.color);
+    try {
+      const res = await fetch(`/api/products/${item.product.id}/variants`);
+      const data: Variant[] = await res.json();
+      // Only show variants with enough stock (or the current variant even if OOS since it's being freed)
+      const usable = data.filter(
+        (v) => v.stock >= item.quantity || (v.size === item.size && v.color === item.color)
+      );
+      setExchangeVariants(usable);
+    } catch {
+      toast.error("Could not load available options");
+      setExchangeTarget(null);
+    } finally {
+      setVariantsLoading(false);
+    }
+  };
+
+  const closeExchange = () => {
+    setExchangeTarget(null);
+    setExchangeVariants([]);
+    setExchangeSize("");
+    setExchangeColor("");
+  };
+
+  // Unique sizes from available variants
+  const availableSizes = [...new Set(exchangeVariants.map((v) => v.size))];
+
+  // Colors available for the currently selected size (sufficient stock)
+  const availableColors = exchangeVariants
+    .filter((v) => v.size === exchangeSize && (v.stock >= (exchangeTarget?.quantity ?? 1) || (v.size === exchangeTarget?.currentSize && v.color === exchangeTarget?.currentColor)))
+    .map((v) => v.color);
+
+  const handleExchange = async () => {
+    if (!exchangeTarget) return;
+    if (exchangeSize === exchangeTarget.currentSize && exchangeColor === exchangeTarget.currentColor) {
+      toast.error("Please select a different size or color"); return;
+    }
+    setExchangeLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${exchangeTarget.orderId}/exchange`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderItemId: exchangeTarget.itemId,
+          newSize: exchangeSize,
+          newColor: exchangeColor,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      // Update local state
+      setOrders((prev) =>
+        prev.map((o) => {
+          if (o.id !== exchangeTarget.orderId) return o;
+          return {
+            ...o,
+            items: o.items.map((item: any) =>
+              item.id === exchangeTarget.itemId
+                ? { ...item, size: exchangeSize, color: exchangeColor }
+                : item
+            ),
+          };
+        })
+      );
+      toast.success("Size/color updated successfully");
+      closeExchange();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Exchange failed");
+    } finally {
+      setExchangeLoading(false);
     }
   };
 
@@ -93,6 +201,15 @@ export default function OrdersPageClient({ orders: initial }: { orders: any[] })
                       <div className="flex-1 min-w-0">
                         <p className="font-inter text-sm text-charcoal line-clamp-1">{item.product.name}</p>
                         <p className="font-inter text-xs text-mauve mt-0.5">{item.size} · {item.color} · Qty: {item.quantity}</p>
+                        {order.status === "PENDING" && (
+                          <button
+                            onClick={() => openExchange(order.id, item)}
+                            className="mt-1.5 flex items-center gap-1 font-inter text-xs text-rose-gold hover:text-rose-gold-dark transition-colors"
+                          >
+                            <ArrowLeftRight size={12} />
+                            Change Size / Color
+                          </button>
+                        )}
                       </div>
                       <p className="font-inter text-sm text-charcoal flex-shrink-0">{formatPrice(item.price * item.quantity)}</p>
                     </div>
@@ -119,6 +236,116 @@ export default function OrdersPageClient({ orders: initial }: { orders: any[] })
           </div>
         )}
       </div>
+
+      {/* Exchange Modal */}
+      {exchangeTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md border border-ivory-200 shadow-xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-ivory-200">
+              <h2 className="font-playfair text-xl text-charcoal">Change Size / Color</h2>
+              <button onClick={closeExchange} className="text-mauve hover:text-charcoal transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-5">
+              <div>
+                <p className="font-inter text-xs text-mauve tracking-widest uppercase mb-1">Product</p>
+                <p className="font-inter text-sm text-charcoal">{exchangeTarget.productName}</p>
+              </div>
+
+              <div className="flex items-center gap-4 bg-ivory-200/40 border border-ivory-200 px-4 py-3">
+                <div>
+                  <p className="font-inter text-xs text-mauve tracking-widest uppercase mb-0.5">Current</p>
+                  <p className="font-inter text-sm text-charcoal font-medium">{exchangeTarget.currentSize} · {exchangeTarget.currentColor}</p>
+                </div>
+                <ArrowLeftRight size={16} className="text-rose-gold mx-2 flex-shrink-0" />
+                <div>
+                  <p className="font-inter text-xs text-mauve tracking-widest uppercase mb-0.5">New</p>
+                  <p className="font-inter text-sm text-charcoal font-medium">
+                    {exchangeSize || "—"} · {exchangeColor || "—"}
+                  </p>
+                </div>
+              </div>
+
+              {variantsLoading ? (
+                <p className="font-inter text-sm text-mauve text-center py-4">Loading available options…</p>
+              ) : (
+                <>
+                  {/* Size */}
+                  <div>
+                    <label className="font-inter text-xs tracking-widest uppercase text-charcoal-light block mb-2">Select Size</label>
+                    <div className="flex flex-wrap gap-2">
+                      {availableSizes.map((size) => (
+                        <button
+                          key={size}
+                          onClick={() => {
+                            setExchangeSize(size);
+                            // Reset color if current color not available in new size
+                            const colorsForSize = exchangeVariants
+                              .filter((v) => v.size === size && (v.stock >= exchangeTarget.quantity || (v.size === exchangeTarget.currentSize && v.color === exchangeTarget.currentColor)))
+                              .map((v) => v.color);
+                            if (!colorsForSize.includes(exchangeColor)) {
+                              setExchangeColor(colorsForSize[0] ?? "");
+                            }
+                          }}
+                          className={`px-4 py-2 font-inter text-sm border transition-all duration-150 ${exchangeSize === size ? "border-rose-gold bg-rose-gold/5 text-charcoal" : "border-ivory-200 text-charcoal-light hover:border-charcoal-light"}`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Color */}
+                  <div>
+                    <label className="font-inter text-xs tracking-widest uppercase text-charcoal-light block mb-2">Select Color</label>
+                    <div className="flex flex-wrap gap-2">
+                      {availableColors.map((color) => (
+                        <button
+                          key={color}
+                          onClick={() => setExchangeColor(color)}
+                          className={`px-4 py-2 font-inter text-sm border transition-all duration-150 ${exchangeColor === color ? "border-rose-gold bg-rose-gold/5 text-charcoal" : "border-ivory-200 text-charcoal-light hover:border-charcoal-light"}`}
+                        >
+                          {color}
+                        </button>
+                      ))}
+                    </div>
+                    {availableColors.length === 0 && exchangeSize && (
+                      <p className="font-inter text-xs text-mauve mt-1">No colors available for this size</p>
+                    )}
+                  </div>
+
+                  <p className="font-inter text-xs text-mauve">
+                    Only available while your order is in <span className="font-medium text-charcoal">PENDING</span> status.
+                    Once processing begins, changes are no longer possible.
+                  </p>
+                </>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t border-ivory-200 flex gap-3 justify-end">
+              <button onClick={closeExchange} className="font-inter text-sm text-charcoal-light hover:text-charcoal transition-colors px-4 py-2">
+                Cancel
+              </button>
+              <Button
+                onClick={handleExchange}
+                loading={exchangeLoading}
+                disabled={
+                  variantsLoading ||
+                  !exchangeSize ||
+                  !exchangeColor ||
+                  (exchangeSize === exchangeTarget.currentSize && exchangeColor === exchangeTarget.currentColor)
+                }
+                size="sm"
+              >
+                Confirm Change
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
