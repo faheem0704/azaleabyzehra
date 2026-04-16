@@ -27,6 +27,33 @@ export default function AdminSettingsPage() {
   const [pwForm, setPwForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
   const [pwSaving, setPwSaving] = useState(false);
 
+  const [inviteForm, setInviteForm] = useState({ name: "", email: "", password: "" });
+  const [inviteSaving, setInviteSaving] = useState(false);
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inviteForm.password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    setInviteSaving(true);
+    try {
+      const res = await fetch("/api/admin/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(inviteForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`Admin account created for ${inviteForm.email}`);
+      setInviteForm({ name: "", email: "", password: "" });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create admin");
+    } finally {
+      setInviteSaving(false);
+    }
+  };
+
   const [shipping, setShipping] = useState({ shippingFee: 199, freeShippingThreshold: 2999 });
   const [shippingSaving, setShippingSaving] = useState(false);
 
@@ -183,6 +210,42 @@ export default function AdminSettingsPage() {
             </div>
           </div>
           <Button type="submit" loading={shippingSaving}>Save Shipping Settings</Button>
+        </div>
+      </form>
+
+      {/* Invite Admin */}
+      <form onSubmit={handleInvite} className="space-y-8 max-w-2xl mt-12">
+        <div className="bg-white border border-ivory-200 p-6 space-y-5">
+          <div>
+            <h2 className="font-playfair text-xl text-charcoal">Add Admin User</h2>
+            <p className="font-inter text-xs text-mauve mt-1">
+              Create a new admin account. They can log in at /admin/login with these credentials.
+            </p>
+          </div>
+          <Input
+            label="Name"
+            placeholder="e.g. Zehra"
+            value={inviteForm.name}
+            onChange={(e) => setInviteForm((p) => ({ ...p, name: e.target.value }))}
+            required
+          />
+          <Input
+            label="Email"
+            type="email"
+            placeholder="their@gmail.com"
+            value={inviteForm.email}
+            onChange={(e) => setInviteForm((p) => ({ ...p, email: e.target.value }))}
+            required
+          />
+          <Input
+            label="Password"
+            type="password"
+            placeholder="Min. 8 characters"
+            value={inviteForm.password}
+            onChange={(e) => setInviteForm((p) => ({ ...p, password: e.target.value }))}
+            required
+          />
+          <Button type="submit" loading={inviteSaving}>Create Admin Account</Button>
         </div>
       </form>
 
