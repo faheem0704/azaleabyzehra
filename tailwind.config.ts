@@ -40,6 +40,7 @@ const config: Config = {
         "fade-up": "fadeUp 0.6s ease forwards",
         "fade-in": "fadeIn 0.4s ease forwards",
         shimmer: "shimmer 2s infinite",
+        marquee: "marquee 28s linear infinite",
       },
       keyframes: {
         fadeUp: {
@@ -53,6 +54,10 @@ const config: Config = {
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
+        },
+        marquee: {
+          "0%": { transform: "translateX(0%)" },
+          "100%": { transform: "translateX(-50%)" },
         },
       },
       backgroundImage: {

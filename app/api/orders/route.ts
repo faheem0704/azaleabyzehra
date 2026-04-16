@@ -179,6 +179,10 @@ export async function POST(req: NextRequest) {
     type VariantSnapshot = { id: string; stock: number; sku: string | null };
     const variantMap = new Map<string, VariantSnapshot>();
 
+    // For products without variant records, accumulate total qty across all sizes/colors
+    // before checking — prevents oversell when multiple line items share the same product
+    const noVariantQtyMap = new Map<string, number>(); // productId → total requested qty
+
     for (const item of authorizedItems) {
       const key = `${item.productId}:${item.size}:${item.color}`;
       const variant = await prisma.productVariant
@@ -197,13 +201,19 @@ export async function POST(req: NextRequest) {
           );
         }
       } else {
-        const prod = await prisma.product.findUnique({
-          where: { id: item.productId },
-          select: { name: true, stock: true },
-        });
-        if (prod && prod.stock < item.quantity) {
-          stockErrors.push(`"${prod.name}" — only ${prod.stock} left in stock`);
-        }
+        // Accumulate — check will happen after the loop
+        noVariantQtyMap.set(item.productId, (noVariantQtyMap.get(item.productId) ?? 0) + item.quantity);
+      }
+    }
+
+    // Check aggregate qty for products without variant records
+    for (const [productId, totalQty] of Array.from(noVariantQtyMap)) {
+      const prod = await prisma.product.findUnique({
+        where: { id: productId },
+        select: { name: true, stock: true },
+      });
+      if (prod && prod.stock < totalQty) {
+        stockErrors.push(`"${prod.name}" — only ${prod.stock} left in stock`);
       }
     }
 

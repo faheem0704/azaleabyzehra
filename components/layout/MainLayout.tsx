@@ -4,6 +4,7 @@ import Footer from "./Footer";
 import CartDrawer from "@/components/cart/CartDrawer";
 import CartSync from "@/components/layout/CartSync";
 import SessionProvider from "@/components/providers/SessionProvider";
+import AnnouncementBanner from "./AnnouncementBanner";
 
 async function getCategories() {
   return prisma.category.findMany({
@@ -19,6 +20,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   return (
     <SessionProvider>
       <CartSync />
+      <AnnouncementBanner />
       <Header categories={categories} />
       <main className="min-h-screen">{children}</main>
       <Footer />
