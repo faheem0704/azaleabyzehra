@@ -1,10 +1,15 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       id: "password-credentials",
       name: "Password",
@@ -18,7 +23,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const rawContact = (credentials.contact as string).trim();
         const password = credentials.password as string;
         const isEmail = rawContact.includes("@");
-        // BUG-20: normalise email to lowercase so login is case-insensitive
         const contact = isEmail ? rawContact.toLowerCase() : rawContact;
 
         const user = await prisma.user.findFirst({
@@ -45,10 +49,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const rawContact = (credentials.contact as string).trim();
         const otp = credentials.otp as string;
         const isEmail = rawContact.includes("@");
-        // BUG-20: normalise email to lowercase for consistent lookup
         const contact = isEmail ? rawContact.toLowerCase() : rawContact;
 
-        // Find valid OTP record
         const otpRecord = await prisma.oTPRecord.findFirst({
           where: {
             contact,
@@ -60,13 +62,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!otpRecord) return null;
 
-        // Mark OTP as used
         await prisma.oTPRecord.update({
           where: { id: otpRecord.id },
           data: { used: true },
         });
 
-        // Find existing user only (otp-credentials is for login, not signup)
         const user = await prisma.user.findFirst({
           where: isEmail ? { email: contact } : { phone: contact },
         });
@@ -83,13 +83,51 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    // Fires on every sign-in attempt. For Google: find or create the user in our DB.
+    async signIn({ account, profile }) {
+      if (account?.provider === "google") {
+        const email = profile?.email;
+        if (!email) return false;
+
+        const existing = await prisma.user.findUnique({
+          where: { email: email.toLowerCase() },
+        });
+
+        if (!existing) {
+          await prisma.user.create({
+            data: {
+              name: (profile?.name as string | undefined) ?? "Google User",
+              email: email.toLowerCase(),
+              role: "CUSTOMER",
+            },
+          });
+        }
+        return true;
+      }
+      return true;
+    },
+
+    // Fires once on sign-in (user present) then on every request (user absent).
+    // For Google: look up our DB id + role via email since Google gives its own user id.
+    async jwt({ token, user, account }) {
       if (user) {
-        token.id = user.id;
-        token.role = (user as { role?: string }).role;
+        if (account?.provider === "google") {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: token.email! },
+            select: { id: true, role: true },
+          });
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role;
+          }
+        } else {
+          token.id = user.id;
+          token.role = (user as { role?: string }).role;
+        }
       }
       return token;
     },
+
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
