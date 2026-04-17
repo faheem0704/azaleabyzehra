@@ -14,7 +14,16 @@ async function getHomeData() {
   const [categories, newArrivals, featuredProducts] = await Promise.all([
     prisma.category.findMany({
       where: { parentId: null },
-      include: { children: true, _count: { select: { products: true } } },
+      include: {
+        children: true,
+        _count: { select: { products: true } },
+        products: {
+          where: { isDeleted: false },
+          select: { images: true },
+          take: 6,
+          orderBy: { createdAt: "desc" },
+        },
+      },
       orderBy: { name: "asc" },
     }),
     prisma.product.findMany({

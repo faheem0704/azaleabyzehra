@@ -20,6 +20,7 @@ export interface Category {
   parent?: Category | null;
   children?: Category[];
   _count?: { products: number };
+  products?: { images: string[] }[];
 }
 
 export interface ProductImage {
