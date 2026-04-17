@@ -34,7 +34,7 @@ export default function NewArrivalsStrip({ products }: NewArrivalsStripProps) {
           ease: "none",
           scrollTrigger: {
             trigger: section,
-            start: "top 15%",
+            start: "top top",
             end: () => `+=${totalWidth + 200}`,
             scrub: 1,
             pin: true,
@@ -51,13 +51,13 @@ export default function NewArrivalsStrip({ products }: NewArrivalsStripProps) {
 
   return (
     <section ref={sectionRef} className="overflow-hidden bg-ivory">
-      <div className="section-padding pt-14 pb-4 flex items-end justify-between">
+      <div className="section-padding pt-10 pb-3 flex items-end justify-between">
         <div>
           <motion.p
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="section-subtitle mb-3"
+            className="section-subtitle mb-2"
           >
             Fresh In
           </motion.p>
@@ -66,21 +66,21 @@ export default function NewArrivalsStrip({ products }: NewArrivalsStripProps) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="section-title"
+            className="font-playfair text-3xl md:text-4xl text-charcoal leading-tight"
           >
             New Arrivals
           </motion.h2>
         </div>
         <Link
           href="/new-arrivals"
-          className="hidden md:flex items-center gap-2 font-inter text-sm text-rose-gold hover:text-rose-gold-dark transition-colors duration-200 group mb-2"
+          className="hidden md:flex items-center gap-2 font-inter text-sm text-rose-gold hover:text-rose-gold-dark transition-colors duration-200 group mb-1"
         >
           View All
           <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
         </Link>
       </div>
 
-      <div ref={trackRef} className="flex gap-6 pl-6 md:pl-12 lg:pl-20 xl:pl-32 pr-12 pb-16 mt-8">
+      <div ref={trackRef} className="flex gap-5 pl-6 md:pl-12 lg:pl-20 xl:pl-32 pr-12 pb-8 mt-5">
         {products.map((product, i) => (
           <motion.div
             key={product.id}
@@ -88,10 +88,11 @@ export default function NewArrivalsStrip({ products }: NewArrivalsStripProps) {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ delay: i * 0.05 }}
-            className="flex-shrink-0 w-64 md:w-72 group"
+            className="flex-shrink-0 w-56 md:w-64 group"
           >
             <Link href={`/products/${product.slug}`}>
-              <div className="relative aspect-[3/4] overflow-hidden bg-ivory-200 mb-4">
+              {/* Image fills card — name + price overlaid at bottom */}
+              <div className="relative overflow-hidden bg-ivory-200" style={{ height: "clamp(220px, calc(100vh - 260px), 420px)" }}>
                 {product.images[0] ? (
                   <Image
                     src={product.images[0]}
@@ -102,22 +103,28 @@ export default function NewArrivalsStrip({ products }: NewArrivalsStripProps) {
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-ivory to-ivory-200" />
                 )}
+
+                {/* NEW badge */}
                 <div className="absolute top-3 left-3">
                   <span className="bg-charcoal text-white text-[10px] font-inter tracking-widest uppercase px-3 py-1">
                     New
                   </span>
                 </div>
+
+                {/* Name + price overlay — always in view */}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent px-4 pt-8 pb-4">
+                  <h3 className="font-inter text-sm text-white line-clamp-1 mb-0.5 group-hover:text-rose-gold-light transition-colors duration-200">
+                    {product.name}
+                  </h3>
+                  <p className="font-playfair text-base text-white/90">{formatPrice(product.price)}</p>
+                </div>
               </div>
-              <h3 className="font-inter text-sm text-charcoal group-hover:text-rose-gold transition-colors duration-200 line-clamp-2 mb-1">
-                {product.name}
-              </h3>
-              <p className="font-playfair text-base text-charcoal">{formatPrice(product.price)}</p>
             </Link>
           </motion.div>
         ))}
 
         {/* End CTA card */}
-        <div className="flex-shrink-0 w-64 md:w-72 flex items-center justify-center">
+        <div className="flex-shrink-0 w-56 md:w-64 flex items-center justify-center" style={{ height: "clamp(220px, calc(100vh - 260px), 420px)" }}>
           <Link
             href="/new-arrivals"
             className="flex flex-col items-center gap-4 p-8 border border-ivory-200 hover:border-rose-gold transition-colors duration-300 group"
