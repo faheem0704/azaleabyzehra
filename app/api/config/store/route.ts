@@ -2,6 +2,7 @@
 export const revalidate = 300;
 
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
@@ -54,6 +55,12 @@ export async function PATCH(req: NextRequest) {
       ...(salePageActive !== undefined ? { salePageActive } : {}),
     },
   });
+  // Bust the RSC cache for the shared layout so the Sale nav tab
+  // appears/disappears immediately without waiting for ISR revalidation.
+  if (salePageActive !== undefined) {
+    revalidatePath("/", "layout");
+  }
+
   return NextResponse.json({
     storeName: updated.storeName,
     contactEmail: updated.contactEmail,
