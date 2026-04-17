@@ -1,4 +1,4 @@
-export const revalidate = 120;
+export const revalidate = 300;
 
 import { cache } from "react";
 import { Metadata } from "next";
@@ -26,6 +26,16 @@ const getProduct = cache(async (slug: string) =>
     },
   })
 );
+
+// Pre-render all product pages at build time — Vercel serves them from CDN edge,
+// ISR regenerates in background so stock/price changes propagate within revalidate window
+export async function generateStaticParams() {
+  const products = await prisma.product.findMany({
+    where: { isDeleted: false },
+    select: { slug: true },
+  });
+  return products.map((p) => ({ slug: p.slug }));
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const product = await getProduct(params.slug);

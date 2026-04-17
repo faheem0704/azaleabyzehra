@@ -16,6 +16,14 @@ export default function CartDrawer() {
 
   // stock map: "productId:size:color" → variant stock (caps quantity buttons)
   const [stockMap, setStockMap] = useState<Map<string, number>>(new Map());
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState(2999);
+
+  useEffect(() => {
+    fetch("/api/config/shipping")
+      .then((r) => r.json())
+      .then((d) => { if (d.freeShippingThreshold) setFreeShippingThreshold(d.freeShippingThreshold); })
+      .catch(() => {});
+  }, []);
 
   // Every time the cart opens, fetch fresh prices AND variant-level stock.
   useEffect(() => {
@@ -134,9 +142,13 @@ export default function CartDrawer() {
                   <p className="text-sm font-inter text-mauve text-center">
                     Discover our beautiful collection of kurtis and ethnic wear
                   </p>
-                  <Button onClick={closeCart} variant="outline" size="sm" className="mt-2">
-                    <Link href="/products">Shop Now</Link>
-                  </Button>
+                  <Link
+                    href="/products"
+                    onClick={closeCart}
+                    className="mt-2 inline-flex items-center justify-center border border-charcoal text-charcoal text-xs font-inter tracking-widest uppercase px-6 py-2.5 hover:bg-charcoal hover:text-ivory transition-all duration-200"
+                  >
+                    Shop Now
+                  </Link>
                 </div>
               ) : (
                 <ul className="divide-y divide-ivory-200">
@@ -218,6 +230,23 @@ export default function CartDrawer() {
             {/* Footer */}
             {items.length > 0 && (
               <div className="border-t border-ivory-200 px-6 py-6 space-y-4">
+                {/* Free shipping progress */}
+                {subtotal < freeShippingThreshold && (
+                  <div className="space-y-1.5">
+                    <p className="font-inter text-xs text-charcoal-light">
+                      Add <span className="text-charcoal font-medium">{formatPrice(freeShippingThreshold - subtotal)}</span> more for free shipping
+                    </p>
+                    <div className="h-1 bg-ivory-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-rose-gold rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, (subtotal / freeShippingThreshold) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {subtotal >= freeShippingThreshold && (
+                  <p className="font-inter text-xs text-rose-gold font-medium">You qualify for free shipping!</p>
+                )}
                 {/* Promo code */}
                 {appliedPromo ? (
                   <div className="flex items-center justify-between bg-rose-gold/5 border border-rose-gold/30 px-3 py-2">
@@ -259,7 +288,7 @@ export default function CartDrawer() {
                   {discount > 0 && (
                     <div className="flex items-center justify-between text-rose-gold">
                       <span className="font-inter text-sm">Discount</span>
-                      <span className="font-inter text-sm">−{formatPrice(discount)}</span>
+                      <span className="font-inter text-sm">−{formatPrice(Math.min(discount, subtotal))}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between border-t border-ivory-200 pt-2">

@@ -25,6 +25,9 @@ export default function NewArrivalsStrip({ products }: NewArrivalsStripProps) {
     const track = trackRef.current;
     if (!section || !track || products.length === 0) return;
 
+    // On mobile (< 1024px) skip the horizontal pin — let it scroll naturally
+    if (window.innerWidth < 1024) return;
+
     const ctx = gsap.context(() => {
       const totalWidth = track.scrollWidth - section.offsetWidth;
 
@@ -50,7 +53,7 @@ export default function NewArrivalsStrip({ products }: NewArrivalsStripProps) {
   if (products.length === 0) return null;
 
   return (
-    <section ref={sectionRef} className="overflow-hidden bg-ivory">
+    <section ref={sectionRef} className="bg-ivory overflow-hidden">
       <div className="section-padding pt-10 pb-3 flex items-end justify-between">
         <div>
           <motion.p
@@ -80,7 +83,7 @@ export default function NewArrivalsStrip({ products }: NewArrivalsStripProps) {
         </Link>
       </div>
 
-      <div ref={trackRef} className="flex gap-5 pl-6 md:pl-12 lg:pl-20 xl:pl-32 pr-12 pb-8 mt-5">
+      <div ref={trackRef} className="flex gap-5 pl-6 md:pl-12 lg:pl-20 xl:pl-32 pr-12 pb-8 mt-5 overflow-x-auto lg:overflow-x-visible hide-scrollbar" style={{ scrollSnapType: "x mandatory" }}>
         {products.map((product, i) => (
           <motion.div
             key={product.id}
@@ -98,6 +101,7 @@ export default function NewArrivalsStrip({ products }: NewArrivalsStripProps) {
                     src={product.images[0]}
                     alt={product.name}
                     fill
+                    sizes="(max-width: 768px) 224px, 256px"
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                 ) : (

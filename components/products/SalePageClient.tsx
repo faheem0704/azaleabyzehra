@@ -77,8 +77,8 @@ export default function SalePageClient() {
 
   const productGrid = (extraClass = "") => (
     <div className={`grid grid-cols-2 lg:grid-cols-3 ${extraClass}`}>
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} onQuickView={setQuickViewProduct} />
+      {products.map((product, i) => (
+        <ProductCard key={product.id} product={product} onQuickView={setQuickViewProduct} priority={i < 4} />
       ))}
     </div>
   );
@@ -91,8 +91,8 @@ export default function SalePageClient() {
           onClick={() => { setPage(p); fetchProducts(p, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }}
           className={`w-10 h-10 font-inter text-sm transition-all duration-200 ${
             p === page
-              ? "bg-red-500 text-white"
-              : "border border-ivory-200 text-charcoal hover:border-red-500 hover:text-red-500"
+              ? "bg-rose-gold text-white"
+              : "border border-ivory-200 text-charcoal hover:border-rose-gold hover:text-rose-gold"
           }`}
         >
           {p}
@@ -108,7 +108,7 @@ export default function SalePageClient() {
         <motion.p
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="section-subtitle mb-3 text-red-500"
+          className="section-subtitle mb-3 text-rose-gold"
         >
           Limited Time
         </motion.p>
@@ -128,7 +128,7 @@ export default function SalePageClient() {
           </p>
           <button
             onClick={() => setMobileFilterOpen(true)}
-            className="flex items-center gap-1.5 font-inter text-xs tracking-[0.15em] uppercase text-charcoal hover:text-red-500 transition-colors"
+            className="flex items-center gap-1.5 font-inter text-xs tracking-[0.15em] uppercase text-charcoal hover:text-rose-gold transition-colors"
           >
             <SlidersHorizontal size={13} />
             Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}

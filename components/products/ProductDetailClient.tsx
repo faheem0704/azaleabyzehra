@@ -189,19 +189,34 @@ export default function ProductDetailClient({ product, related }: Props) {
                 onMouseLeave={() => setIsZoomed(false)}
                 onClick={() => setLightboxOpen(true)}
               >
-                {product.images[selectedImage] ? (
-                  <Image
-                    src={product.images[selectedImage]}
-                    alt={product.name}
-                    fill
-                    priority
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    className={`object-cover transition-transform duration-300 ${isZoomed ? "scale-150" : "scale-100"}`}
-                    style={isZoomed ? { transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` } : {}}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-ivory to-ivory-200" />
-                )}
+                <AnimatePresence mode="wait" initial={false}>
+                  {product.images[selectedImage] ? (
+                    <motion.div
+                      key={selectedImage}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute inset-0"
+                      style={{
+                        transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
+                        transform: isZoomed ? "scale(1.5)" : "scale(1)",
+                        transition: "transform 0.3s ease",
+                      }}
+                    >
+                      <Image
+                        src={product.images[selectedImage]}
+                        alt={product.name}
+                        fill
+                        priority
+                        sizes="(max-width: 1024px) 100vw, 50vw"
+                        className="object-cover"
+                      />
+                    </motion.div>
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-ivory to-ivory-200" />
+                  )}
+                </AnimatePresence>
 
                 {/* Badges */}
                 <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -247,18 +262,29 @@ export default function ProductDetailClient({ product, related }: Props) {
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
               >
-                {product.images[selectedImage] ? (
-                  <Image
-                    src={product.images[selectedImage]}
-                    alt={product.name}
-                    fill
-                    priority
-                    sizes="100vw"
-                    className="object-cover transition-opacity duration-300"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-ivory to-ivory-200" />
-                )}
+                <AnimatePresence mode="wait" initial={false}>
+                  {product.images[selectedImage] ? (
+                    <motion.div
+                      key={selectedImage}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.22 }}
+                      className="absolute inset-0"
+                    >
+                      <Image
+                        src={product.images[selectedImage]}
+                        alt={product.name}
+                        fill
+                        priority
+                        sizes="100vw"
+                        className="object-cover"
+                      />
+                    </motion.div>
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-ivory to-ivory-200" />
+                  )}
+                </AnimatePresence>
 
                 {/* Badges */}
                 <div className="absolute top-4 left-4 flex flex-col gap-2">

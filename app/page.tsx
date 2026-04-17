@@ -1,4 +1,4 @@
-export const revalidate = 60; // ISR: refresh every 60s, enables prefetching
+export const revalidate = 300; // ISR: refresh every 5 min — product/category data is stable
 
 import { prisma } from "@/lib/prisma";
 import MainLayout from "@/components/layout/MainLayout";

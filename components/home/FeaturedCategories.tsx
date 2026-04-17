@@ -6,17 +6,31 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 import { Category } from "@/types";
 
-// Fallback images — used only when a category has no products yet
+// Unsplash fallbacks — use WebP at 700px (Unsplash supports imgix transforms)
 const FALLBACK_POOL = [
-  "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=900&q=80",
-  "https://images.unsplash.com/photo-1583391733956-6c78276477e2?w=900&q=80",
-  "https://images.unsplash.com/photo-1617119109767-1f5a6cc49c65?w=900&q=80",
-  "https://images.unsplash.com/photo-1603400521630-9f2de124b33b?w=900&q=80",
-  "https://images.unsplash.com/photo-1596783074918-c84cb06531ca?w=900&q=80",
-  "https://images.unsplash.com/photo-1537832816519-689ad163238b?w=900&q=80",
-  "https://images.unsplash.com/photo-1594938298603-c8148c4b4c7e?w=900&q=80",
-  "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=900&q=80",
+  "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=700&q=75&fm=webp",
+  "https://images.unsplash.com/photo-1583391733956-6c78276477e2?w=700&q=75&fm=webp",
+  "https://images.unsplash.com/photo-1617119109767-1f5a6cc49c65?w=700&q=75&fm=webp",
+  "https://images.unsplash.com/photo-1603400521630-9f2de124b33b?w=700&q=75&fm=webp",
+  "https://images.unsplash.com/photo-1596783074918-c84cb06531ca?w=700&q=75&fm=webp",
+  "https://images.unsplash.com/photo-1537832816519-689ad163238b?w=700&q=75&fm=webp",
+  "https://images.unsplash.com/photo-1594938298603-c8148c4b4c7e?w=700&q=75&fm=webp",
+  "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=700&q=75&fm=webp",
 ];
+
+// Add Cloudinary auto-format + quality + width transforms to reduce payload.
+// Raw upload URLs look like: .../upload/v12345/filename.jpg
+// Transformed: .../upload/f_auto,q_auto,w_600/v12345/filename.jpg
+function optimizeUrl(url: string): string {
+  if (
+    url.includes("res.cloudinary.com") &&
+    url.includes("/upload/") &&
+    !url.includes("/upload/f_auto")   // don't double-apply transforms
+  ) {
+    return url.replace("/upload/", "/upload/f_auto,q_auto,w_600/");
+  }
+  return url;
+}
 
 // Collect up to 6 real product thumbnail images for a category
 function getCategoryImages(cat: Category, fallbackIndex: number): string[] {
@@ -81,7 +95,7 @@ export default function FeaturedCategories({ categories }: Props) {
 
           const images     = getCategoryImages(cat, i);
           // Stagger rotation so panels don't all flip at the same moment
-          const currentSrc = images[(tick + i) % images.length];
+          const currentSrc = optimizeUrl(images[(tick + i) % images.length]);
 
           return (
             <Link
@@ -100,6 +114,8 @@ export default function FeaturedCategories({ categories }: Props) {
                   key={currentSrc}
                   src={currentSrc}
                   alt={cat.name}
+                  loading="lazy"
+                  decoding="async"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -233,7 +249,7 @@ export default function FeaturedCategories({ categories }: Props) {
       <div className="md:hidden grid grid-cols-2 gap-2">
         {categories.map((cat, i) => {
           const images     = getCategoryImages(cat, i);
-          const currentSrc = images[(tick + i) % images.length];
+          const currentSrc = optimizeUrl(images[(tick + i) % images.length]);
 
           return (
             <motion.div
@@ -252,6 +268,8 @@ export default function FeaturedCategories({ categories }: Props) {
                     key={currentSrc}
                     src={currentSrc}
                     alt={cat.name}
+                    loading="lazy"
+                    decoding="async"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}

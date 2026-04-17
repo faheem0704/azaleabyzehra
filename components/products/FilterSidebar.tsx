@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
-const COLORS = ["Black", "White", "Navy", "Maroon", "Green", "Pink", "Cream", "Blue", "Grey", "Orange"];
-const FABRICS = ["Cotton", "Lawn", "Chiffon", "Silk", "Linen", "Georgette", "Karandi"];
+const DEFAULT_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
+const DEFAULT_COLORS = ["Black", "White", "Navy", "Maroon", "Green", "Pink", "Cream", "Blue", "Grey", "Orange"];
+const DEFAULT_FABRICS = ["Cotton", "Lawn", "Chiffon", "Silk", "Linen", "Georgette"];
 
 interface Filters {
   minPrice: string;
@@ -58,8 +58,21 @@ function AccordionSection({ title, children }: { title: string; children: React.
 }
 
 export default function FilterSidebar({ filters, onFilterChange, onReset, mobileOpen, onMobileOpenChange }: FilterSidebarProps) {
+  const [availableSizes, setAvailableSizes] = useState(DEFAULT_SIZES);
+  const [availableColors, setAvailableColors] = useState(DEFAULT_COLORS);
+  const [availableFabrics, setAvailableFabrics] = useState(DEFAULT_FABRICS);
 
-
+  useEffect(() => {
+    fetch("/api/products/options")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { sizes: string[]; colors: string[]; fabrics: string[] } | null) => {
+        if (!data) return;
+        if (data.sizes.length > 0) setAvailableSizes(data.sizes);
+        if (data.colors.length > 0) setAvailableColors(data.colors);
+        if (data.fabrics.length > 0) setAvailableFabrics(data.fabrics);
+      })
+      .catch(() => {});
+  }, []);
 
   const toggleSize = (size: string) => {
     const sizes = filters.sizes.includes(size)
@@ -147,7 +160,7 @@ export default function FilterSidebar({ filters, onFilterChange, onReset, mobile
       {/* Sizes */}
       <AccordionSection title="Size">
         <div className="flex flex-wrap gap-2">
-          {SIZES.map((size) => (
+          {availableSizes.map((size) => (
             <button
               key={size}
               onClick={() => toggleSize(size)}
@@ -167,7 +180,7 @@ export default function FilterSidebar({ filters, onFilterChange, onReset, mobile
       {/* Colors */}
       <AccordionSection title="Color">
         <div className="space-y-2">
-          {COLORS.map((color) => (
+          {availableColors.map((color) => (
             <label key={color} onClick={() => toggleColor(color)} className="flex items-center gap-3 cursor-pointer group">
               <div
                 className={cn(
@@ -192,7 +205,7 @@ export default function FilterSidebar({ filters, onFilterChange, onReset, mobile
       {/* Fabric */}
       <AccordionSection title="Fabric">
         <div className="space-y-2">
-          {FABRICS.map((fabric) => (
+          {availableFabrics.map((fabric) => (
             <label key={fabric} onClick={() => toggleFabric(fabric)} className="flex items-center gap-3 cursor-pointer group">
               <div
                 className={cn(

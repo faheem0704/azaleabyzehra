@@ -20,6 +20,7 @@ export default function AccountPageClient({ user }: { user: { name?: string; ema
   const [form, setForm] = useState({ ...EMPTY });
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [pincodeLoading, setPincodeLoading] = useState(false);
 
   useEffect(() => {
@@ -71,7 +72,6 @@ export default function AccountPageClient({ user }: { user: { name?: string; ema
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Remove this address?")) return;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/account/addresses/${id}`, { method: "DELETE" });
@@ -127,7 +127,7 @@ export default function AccountPageClient({ user }: { user: { name?: string; ema
             <form onSubmit={handleSave} className="border border-ivory-200 bg-white p-6 mb-6 space-y-4">
               <h3 className="font-playfair text-lg text-charcoal">New Address</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input label="Full Name *" {...f("name")} required placeholder="Ayesha Khan" />
+                <Input label="Full Name *" {...f("name")} required placeholder="Priya Sharma" />
                 <Input label="Phone *" {...f("phone")} required placeholder="+91 900 000 0000" />
               </div>
               <Input label="Address Line 1 *" {...f("line1")} required placeholder="House No., Street" />
@@ -189,10 +189,29 @@ export default function AccountPageClient({ user }: { user: { name?: string; ema
                           <Star size={15} />
                         </button>
                       )}
-                      <button onClick={() => handleDelete(addr.id)} disabled={deletingId === addr.id} title="Remove"
-                        className="text-mauve hover:text-red-500 transition-colors disabled:opacity-40">
-                        <Trash2 size={15} />
-                      </button>
+                      {confirmDeleteId === addr.id ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => { setConfirmDeleteId(null); handleDelete(addr.id); }}
+                            disabled={deletingId === addr.id}
+                            className="text-xs font-inter text-red-500 hover:text-red-700 transition-colors disabled:opacity-40"
+                          >
+                            Remove
+                          </button>
+                          <span className="text-mauve">·</span>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="text-xs font-inter text-charcoal-light hover:text-charcoal transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setConfirmDeleteId(addr.id)} title="Remove"
+                          className="text-mauve hover:text-red-500 transition-colors">
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

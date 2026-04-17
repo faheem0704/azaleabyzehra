@@ -335,7 +335,7 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
             className="fixed inset-0 z-[60] bg-ivory/98 backdrop-blur-md flex flex-col items-center justify-center"
           >
             <button
-              onClick={closeSearch}
+              onClick={() => { setSearchQuery(""); closeSearch(); }}
               className="absolute top-6 right-6 text-charcoal hover:text-rose-gold transition-colors"
             >
               <X size={24} />
@@ -351,10 +351,12 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && searchQuery.trim()) {
+                      const q = searchQuery.trim();
+                      setSearchQuery("");
                       closeSearch();
-                      router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+                      router.push(`/products?search=${encodeURIComponent(q)}`);
                     }
-                    if (e.key === "Escape") closeSearch();
+                    if (e.key === "Escape") { setSearchQuery(""); closeSearch(); }
                   }}
                   placeholder="Search kurtis, sets, dupattas…"
                   className="flex-1 bg-transparent text-2xl font-playfair text-charcoal placeholder-mauve focus:outline-none"
@@ -393,7 +395,6 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                   { label: "All Products", href: "/products" },
                   { label: "New Arrivals", href: "/new-arrivals" },
                   ...(salePageActive ? [{ label: "Sale", href: "/sale", sale: true }] : []),
-                  ...categories.map((c) => ({ label: c.name, href: `/products?category=${c.slug}` })),
                   { label: "Orders", href: "/orders" },
                   { label: "Wishlist", href: "/wishlist" },
                   { label: "Help", href: "/help" },
@@ -416,6 +417,38 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                     >
                       {item.label}
                     </Link>
+                  </motion.li>
+                ))}
+                {/* Categories — parent with indented children */}
+                {categories.filter((c) => !c.parentId).map((cat, i) => (
+                  <motion.li
+                    key={cat.id}
+                    initial={{ opacity: 0, x: 24 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: (6 + i) * 0.05 }}
+                  >
+                    <Link
+                      href={`/products?category=${cat.slug}`}
+                      onClick={closeMobileMenu}
+                      className="block py-3 font-inter text-lg text-charcoal hover:text-rose-gold transition-colors border-b border-ivory-200"
+                    >
+                      {cat.name}
+                    </Link>
+                    {cat.children && cat.children.length > 0 && (
+                      <ul className="pl-4 border-b border-ivory-200">
+                        {cat.children.map((child) => (
+                          <li key={child.id}>
+                            <Link
+                              href={`/products?category=${child.slug}`}
+                              onClick={closeMobileMenu}
+                              className="block py-2 font-inter text-sm text-charcoal-light hover:text-rose-gold transition-colors"
+                            >
+                              {child.name}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </motion.li>
                 ))}
               </motion.ul>

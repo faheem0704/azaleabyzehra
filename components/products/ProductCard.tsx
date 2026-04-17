@@ -12,12 +12,35 @@ import { useWishlistStore } from "@/store/wishlistStore";
 import Badge from "@/components/ui/Badge";
 import toast from "react-hot-toast";
 
+// Maps common Indian fashion color names to CSS hex values for accurate swatches.
+// Multi-word names (e.g. "Bottle Green") become broken CSS color names without this.
+const COLOR_HEX: Record<string, string> = {
+  black: "#1a1a1a", white: "#ffffff", ivory: "#fffff0", cream: "#fffdd0",
+  red: "#e53e3e", maroon: "#800000", pink: "#ec4899", rose: "#f43f5e",
+  fuchsia: "#d946ef", purple: "#9333ea", lavender: "#c4b5fd",
+  blue: "#3b82f6", navy: "#1e3a5f", teal: "#0d9488", turquoise: "#06b6d4",
+  green: "#22c55e", olive: "#6b7c3e", "bottle green": "#006a4e",
+  yellow: "#eab308", mustard: "#ca8a04", orange: "#f97316", peach: "#ffcba4",
+  brown: "#92400e", beige: "#d4b483", tan: "#b5956a", camel: "#c19a6b",
+  grey: "#9ca3af", gray: "#9ca3af", silver: "#d1d5db", charcoal: "#374151",
+  "dusty rose": "#c2847a", "dusty pink": "#d4a0a0", mauve: "#b5858f",
+  "royal blue": "#2563eb", "sky blue": "#38bdf8", "mint green": "#a7f3d0",
+  "forest green": "#15803d", "burnt orange": "#ea580c", "off white": "#f5f0e8",
+  gold: "#d4a017", "rose gold": "#c9956c", copper: "#b87333",
+};
+
+function colorToHex(name: string): string {
+  const key = name.toLowerCase().trim();
+  return COLOR_HEX[key] ?? "#d1d5db"; // neutral grey fallback
+}
+
 interface ProductCardProps {
   product: Product;
   onQuickView?: (product: Product) => void;
+  priority?: boolean;
 }
 
-export default function ProductCard({ product, onQuickView }: ProductCardProps) {
+export default function ProductCard({ product, onQuickView, priority = false }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
   const addItem = useCartStore((s) => s.addItem);
@@ -93,6 +116,7 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
               src={product.images[imageIndex] || product.images[0]}
               alt={product.name}
               fill
+              priority={priority}
               sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className="object-cover transition-transform duration-700 group-hover:scale-105"
             />
@@ -199,7 +223,7 @@ export default function ProductCard({ product, onQuickView }: ProductCardProps) 
                   key={color}
                   title={color}
                   className="w-3.5 h-3.5 rounded-full border border-ivory-200 shadow-sm"
-                  style={{ backgroundColor: color.toLowerCase().replace(/\s/g, "") }}
+                  style={{ backgroundColor: colorToHex(color) }}
                 />
               ))}
               {product.colors.length > 5 && (

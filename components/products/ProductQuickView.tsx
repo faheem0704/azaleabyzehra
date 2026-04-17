@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,6 +22,22 @@ export default function ProductQuickView({ product, onClose }: ProductQuickViewP
   const [selectedColor, setSelectedColor] = useState(product.colors[0] || "");
   const [quantity, setQuantity] = useState(1);
   const [imageIndex, setImageIndex] = useState(0);
+
+  // Variant-level stock map: "size:color" → stock
+  const [variantStock, setVariantStock] = useState<Map<string, number>>(new Map());
+  useEffect(() => {
+    fetch(`/api/products/${product.id}/variants`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((variants: { size: string; color: string; stock: number }[] | null) => {
+        if (!variants) return;
+        setVariantStock(new Map(variants.map((v) => [`${v.size}:${v.color}`, v.stock])));
+      })
+      .catch(() => {});
+  }, [product.id]);
+
+  const currentStock = variantStock.size > 0
+    ? (variantStock.get(`${selectedSize}:${selectedColor}`) ?? 0)
+    : product.stock;
   const addItem = useCartStore((s) => s.addItem);
   const openCart = useCartStore((s) => s.openCart);
   const { addItem: addToWishlist, removeItem: removeFromWishlist, hasItem } = useWishlistStore();
@@ -141,15 +157,15 @@ export default function ProductQuickView({ product, onClose }: ProductQuickViewP
                 <div className="flex items-center border border-ivory-200 w-fit">
                   <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center text-charcoal hover:text-rose-gold">−</button>
                   <span className="w-12 text-center font-inter text-sm">{quantity}</span>
-                  <button onClick={() => setQuantity(q => Math.min(product.stock, q + 1))} className="w-10 h-10 flex items-center justify-center text-charcoal hover:text-rose-gold">+</button>
+                  <button onClick={() => setQuantity(q => Math.min(currentStock, q + 1))} disabled={currentStock === 0} className="w-10 h-10 flex items-center justify-center text-charcoal hover:text-rose-gold disabled:opacity-30">+</button>
                 </div>
               </div>
 
               {/* Actions */}
               <div className="flex gap-3">
-                <Button onClick={handleAddToCart} className="flex-1" disabled={product.stock === 0}>
+                <Button onClick={handleAddToCart} className="flex-1" disabled={currentStock === 0}>
                   <ShoppingBag size={16} className="mr-2" />
-                  {product.stock === 0 ? "Sold Out" : "Add to Cart"}
+                  {currentStock === 0 ? "Sold Out" : "Add to Cart"}
                 </Button>
                 <button
                   onClick={() => {

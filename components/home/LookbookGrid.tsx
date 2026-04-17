@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
@@ -59,10 +60,12 @@ export default function LookbookGrid({ products }: LookbookGridProps) {
             >
               <Link href={product ? `/products/${product.slug}` : "/products"}>
                 <div className={`relative w-full ${i === 0 ? "aspect-[3/4] md:aspect-auto md:h-full" : "aspect-[3/4]"} bg-ivory-200`}>
-                  <img
+                  <Image
                     src={src}
                     alt={product?.name || `Lookbook ${i + 1}`}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    fill
+                    sizes="(max-width: 768px) 50vw, 33vw"
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-charcoal/0 group-hover:bg-charcoal/30 transition-all duration-500" />
                   {product && (

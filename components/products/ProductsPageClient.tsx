@@ -85,8 +85,8 @@ export default function ProductsPageClient() {
 
   const productGrid = (extraClass = "") => (
     <div className={`grid grid-cols-2 lg:grid-cols-3 ${extraClass}`}>
-      {products.map((product) => (
-        <ProductCard key={product.id} product={product} onQuickView={setQuickViewProduct} />
+      {products.map((product, i) => (
+        <ProductCard key={product.id} product={product} onQuickView={setQuickViewProduct} priority={i < 4} />
       ))}
     </div>
   );

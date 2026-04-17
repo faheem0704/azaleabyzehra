@@ -19,6 +19,8 @@ export default function BrandStory() {
               alt="Indian ethnic wear craftsmanship"
               width={600}
               height={750}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover"
             />
           </motion.div>

@@ -39,6 +39,13 @@ export default function CheckoutPageClient() {
     name: "", phone: "", line1: "", line2: "", city: "", state: "", pincode: "",
   });
 
+  // Redirect guests to login
+  useEffect(() => {
+    if (session === null) {
+      router.replace(`/login?redirect=/checkout`);
+    }
+  }, [session, router]);
+
   // Saved addresses
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
@@ -409,7 +416,7 @@ export default function CheckoutPageClient() {
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="Full Name *" value={address.name} onChange={(e) => setAddress(p => ({ ...p, name: e.target.value }))} required placeholder="Ayesha Khan" />
+                    <Input label="Full Name *" value={address.name} onChange={(e) => setAddress(p => ({ ...p, name: e.target.value }))} required placeholder="Priya Sharma" />
                     <Input label="Phone Number *" value={address.phone} onChange={(e) => setAddress(p => ({ ...p, phone: e.target.value }))} required placeholder="+91 900 000 0000" />
                   </div>
                   <Input label="Address Line 1 *" value={address.line1} onChange={(e) => setAddress(p => ({ ...p, line1: e.target.value }))} required placeholder="House No., Street" />
@@ -475,8 +482,8 @@ export default function CheckoutPageClient() {
           </div>
 
           {/* Order Summary */}
-          <div>
-            <div className="sticky top-28 border border-ivory-200 p-6 space-y-6">
+          <div className="order-first lg:order-none">
+            <div className="sticky top-24 border border-ivory-200 p-6 space-y-6">
               <h3 className="font-playfair text-xl text-charcoal">Order Summary</h3>
 
               {/* Items */}
