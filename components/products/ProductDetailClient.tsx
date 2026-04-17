@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Heart, ShoppingBag, Share2, Star, ChevronRight } from "lucide-react";
+import { Heart, ShoppingBag, Share2, Star, ChevronRight, ChevronLeft } from "lucide-react";
 import { Product, ProductVariant } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cartStore";
@@ -15,6 +15,7 @@ import Badge from "@/components/ui/Badge";
 import ProductCard from "./ProductCard";
 import RecentlyViewed, { trackProductView } from "./RecentlyViewed";
 import SizeGuideModal from "./SizeGuideModal";
+import SocialProofPopup from "./SocialProofPopup";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -60,6 +61,23 @@ export default function ProductDetailClient({ product, related }: Props) {
   const [activeTab, setActiveTab] = useState<"description" | "fabric" | "care" | "reviews">("description");
   const [isZoomed, setIsZoomed] = useState(false);
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+
+  // Touch swipe for mobile gallery
+  const touchStartX = useRef(0);
+  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.targetTouches[0].clientX; };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) < 40) return; // ignore taps
+    if (diff > 0) setSelectedImage((i) => Math.min(product.images.length - 1, i + 1));
+    else setSelectedImage((i) => Math.max(0, i - 1));
+  };
+
+  // Horizontal scroll ref for "You May Also Like"
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const scrollCarousel = (dir: "left" | "right") => {
+    carouselRef.current?.scrollBy({ left: dir === "right" ? 280 : -280, behavior: "smooth" });
+  };
+
   useEffect(() => { trackProductView(product.id); }, [product.id]);
 
   const [reviews, setReviews] = useState<any[]>(product.reviews || []);
@@ -144,53 +162,160 @@ export default function ProductDetailClient({ product, related }: Props) {
       <div className="section-padding">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 xl:gap-20">
           {/* Image Gallery */}
-          <div className="flex gap-4">
-            {/* Thumbnails */}
-            {product.images.length > 1 && (
-              <div className="flex flex-col gap-3 w-20 flex-shrink-0">
-                {product.images.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setSelectedImage(i)}
-                    className={`relative aspect-square overflow-hidden border-2 transition-all duration-200 ${
-                      i === selectedImage ? "border-rose-gold" : "border-transparent"
-                    }`}
-                  >
-                    <Image src={img} alt={`${product.name} view ${i + 1}`} fill className="object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Main Image */}
-            <div
-              className="flex-1 relative aspect-[3/4] overflow-hidden bg-ivory-200 cursor-zoom-in"
-              onMouseMove={handleZoom}
-              onMouseEnter={() => setIsZoomed(true)}
-              onMouseLeave={() => setIsZoomed(false)}
-            >
-              {product.images[selectedImage] ? (
-                <Image
-                  src={product.images[selectedImage]}
-                  alt={product.name}
-                  fill
-                  priority
-                  className={`object-cover transition-transform duration-300 ${isZoomed ? "scale-150" : "scale-100"}`}
-                  style={isZoomed ? { transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` } : {}}
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-ivory to-ivory-200" />
+          <div>
+            {/* ── Desktop: thumbnails left + main image with arrows + zoom ── */}
+            <div className="hidden lg:flex gap-4">
+              {/* Thumbnail strip */}
+              {product.images.length > 1 && (
+                <div className="flex flex-col gap-3 w-20 flex-shrink-0">
+                  {product.images.map((img, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedImage(i)}
+                      className={`relative aspect-square overflow-hidden border-2 transition-all duration-200 ${
+                        i === selectedImage ? "border-rose-gold" : "border-transparent hover:border-ivory-200"
+                      }`}
+                    >
+                      <Image src={img} alt={`${product.name} view ${i + 1}`} fill className="object-cover" sizes="80px" />
+                    </button>
+                  ))}
+                </div>
               )}
 
-              {/* Badges */}
-              <div className="absolute top-4 left-4 flex flex-col gap-2">
-                {product.isNewArrival && <Badge variant="new">New Arrival</Badge>}
-                {product.compareAtPrice && (
-                  <Badge variant="sale">
-                    Sale
-                  </Badge>
+              {/* Main image */}
+              <div className="flex-1 relative aspect-[3/4] overflow-hidden bg-ivory-200 cursor-zoom-in group"
+                onMouseMove={handleZoom}
+                onMouseEnter={() => setIsZoomed(true)}
+                onMouseLeave={() => setIsZoomed(false)}
+              >
+                {product.images[selectedImage] ? (
+                  <Image
+                    src={product.images[selectedImage]}
+                    alt={product.name}
+                    fill
+                    priority
+                    sizes="(max-width: 1024px) 100vw, 50vw"
+                    className={`object-cover transition-transform duration-300 ${isZoomed ? "scale-150" : "scale-100"}`}
+                    style={isZoomed ? { transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` } : {}}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-ivory to-ivory-200" />
+                )}
+
+                {/* Badges */}
+                <div className="absolute top-4 left-4 flex flex-col gap-2">
+                  {product.isNewArrival && <Badge variant="new">New Arrival</Badge>}
+                  {product.compareAtPrice && <Badge variant="sale">Sale</Badge>}
+                </div>
+
+                {/* Prev / Next arrows */}
+                {product.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setSelectedImage((i) => Math.max(0, i - 1))}
+                      disabled={selectedImage === 0}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 disabled:opacity-0 hover:bg-white"
+                    >
+                      <ChevronLeft size={18} className="text-charcoal" />
+                    </button>
+                    <button
+                      onClick={() => setSelectedImage((i) => Math.min(product.images.length - 1, i + 1))}
+                      disabled={selectedImage === product.images.length - 1}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 disabled:opacity-0 hover:bg-white"
+                    >
+                      <ChevronRight size={18} className="text-charcoal" />
+                    </button>
+                  </>
+                )}
+
+                {/* Image counter */}
+                {product.images.length > 1 && (
+                  <div className="absolute bottom-4 right-4 bg-charcoal/60 text-ivory text-xs font-inter px-2 py-0.5 rounded-full">
+                    {selectedImage + 1} / {product.images.length}
+                  </div>
                 )}
               </div>
+            </div>
+
+            {/* ── Mobile / Tablet: full-width swipeable carousel ── */}
+            <div className="lg:hidden">
+              <div
+                className="relative aspect-[3/4] overflow-hidden bg-ivory-200"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+              >
+                {product.images[selectedImage] ? (
+                  <Image
+                    src={product.images[selectedImage]}
+                    alt={product.name}
+                    fill
+                    priority
+                    sizes="100vw"
+                    className="object-cover transition-opacity duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-ivory to-ivory-200" />
+                )}
+
+                {/* Badges */}
+                <div className="absolute top-4 left-4 flex flex-col gap-2">
+                  {product.isNewArrival && <Badge variant="new">New Arrival</Badge>}
+                  {product.compareAtPrice && <Badge variant="sale">Sale</Badge>}
+                </div>
+
+                {/* Prev / Next tap areas */}
+                {product.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setSelectedImage((i) => Math.max(0, i - 1))}
+                      className="absolute left-0 top-0 bottom-0 w-1/4"
+                      aria-label="Previous image"
+                    />
+                    <button
+                      onClick={() => setSelectedImage((i) => Math.min(product.images.length - 1, i + 1))}
+                      className="absolute right-0 top-0 bottom-0 w-1/4"
+                      aria-label="Next image"
+                    />
+                  </>
+                )}
+
+                {/* Dot indicators */}
+                {product.images.length > 1 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {product.images.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedImage(i)}
+                        className={`rounded-full transition-all duration-200 ${
+                          i === selectedImage ? "w-4 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Counter */}
+                <div className="absolute top-4 right-4 bg-charcoal/50 text-ivory text-xs font-inter px-2 py-0.5 rounded-full">
+                  {selectedImage + 1}/{product.images.length}
+                </div>
+              </div>
+
+              {/* Thumbnail strip below on mobile */}
+              {product.images.length > 1 && (
+                <div className="flex gap-2 mt-3 overflow-x-auto hide-scrollbar pb-1">
+                  {product.images.map((img, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedImage(i)}
+                      className={`relative w-16 h-20 flex-shrink-0 overflow-hidden border-2 transition-all duration-200 ${
+                        i === selectedImage ? "border-rose-gold" : "border-transparent"
+                      }`}
+                    >
+                      <Image src={img} alt={`View ${i + 1}`} fill className="object-cover" sizes="64px" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -502,13 +627,47 @@ export default function ProductDetailClient({ product, related }: Props) {
           </div>
         </div>
 
-        {/* Related Products */}
+        {/* You May Also Like — horizontal scrollable carousel */}
         {related.length > 0 && (
-          <div className="mt-16">
-            <h2 className="font-playfair text-3xl text-charcoal mb-10">You May Also Like</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {related.map((product) => (
-                <ProductCard key={product.id} product={product} />
+          <div className="mt-20">
+            <div className="flex items-end justify-between mb-8">
+              <div>
+                <p className="section-subtitle text-xs mb-1">Curated for you</p>
+                <h2 className="font-playfair text-3xl text-charcoal">You May Also Like</h2>
+              </div>
+              <div className="flex items-center gap-3">
+                {product.category && (
+                  <Link
+                    href={`/products?category=${product.category.slug}`}
+                    className="hidden sm:block font-inter text-xs tracking-widest uppercase text-charcoal-light hover:text-rose-gold transition-colors"
+                  >
+                    View All →
+                  </Link>
+                )}
+                {/* Scroll arrows */}
+                <button
+                  onClick={() => scrollCarousel("left")}
+                  className="w-9 h-9 border border-ivory-200 flex items-center justify-center hover:border-charcoal transition-colors"
+                >
+                  <ChevronLeft size={16} className="text-charcoal" />
+                </button>
+                <button
+                  onClick={() => scrollCarousel("right")}
+                  className="w-9 h-9 border border-ivory-200 flex items-center justify-center hover:border-charcoal transition-colors"
+                >
+                  <ChevronRight size={16} className="text-charcoal" />
+                </button>
+              </div>
+            </div>
+
+            <div
+              ref={carouselRef}
+              className="flex gap-4 overflow-x-auto hide-scrollbar pb-2"
+            >
+              {related.map((p) => (
+                <div key={p.id} className="flex-shrink-0 w-44 sm:w-52 md:w-60">
+                  <ProductCard product={p} />
+                </div>
               ))}
             </div>
           </div>
@@ -516,6 +675,12 @@ export default function ProductDetailClient({ product, related }: Props) {
 
         <RecentlyViewed currentProductId={product.id} />
       </div>
+
+      {/* Social proof popup — renders globally fixed bottom-left */}
+      <SocialProofPopup
+        productName={product.name}
+        productImage={product.images[0]}
+      />
 
       <SizeGuideModal
         isOpen={isSizeGuideOpen}
