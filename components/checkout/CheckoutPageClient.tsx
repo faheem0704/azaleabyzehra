@@ -415,7 +415,7 @@ export default function CheckoutPageClient() {
                   <Input label="Address Line 1 *" value={address.line1} onChange={(e) => setAddress(p => ({ ...p, line1: e.target.value }))} required placeholder="House No., Street" />
                   <Input label="Address Line 2" value={address.line2} onChange={(e) => setAddress(p => ({ ...p, line2: e.target.value }))} placeholder="Area, Landmark (optional)" />
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <Input label="City *" value={address.city} onChange={(e) => setAddress(p => ({ ...p, city: e.target.value }))} required placeholder="Mumbai" />
                     <Input label="State *" value={address.state} onChange={(e) => setAddress(p => ({ ...p, state: e.target.value }))} required placeholder="Maharashtra" />
                     {/* Pincode — auto-fills city & state via India Post API */}

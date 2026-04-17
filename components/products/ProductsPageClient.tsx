@@ -182,7 +182,7 @@ export default function ProductsPageClient() {
 
       {/* ── Mobile / tablet layout: edge-to-edge 2-col grid ── */}
       {/* Bleeds out of section-padding (px-6 mobile / px-12 tablet) to keep images wide */}
-      <div className="lg:hidden -mx-6 md:-mx-12 px-2 md:px-2">
+      <div className="lg:hidden overflow-x-hidden -mx-6 md:-mx-12 px-2 md:px-2">
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">{skeletons}</div>
         ) : products.length === 0 ? (

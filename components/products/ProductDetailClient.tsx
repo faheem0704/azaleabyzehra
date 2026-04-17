@@ -505,7 +505,8 @@ export default function ProductDetailClient({ product, related }: Props) {
 
         {/* Tabs */}
         <div className="mt-20 border-t border-ivory-200">
-          <div className="flex gap-8 border-b border-ivory-200 overflow-x-auto hide-scrollbar">
+          <div className="flex gap-4 sm:gap-8 border-b border-ivory-200 overflow-x-auto hide-scrollbar"
+               style={{ WebkitOverflowScrolling: "touch" }}>
             {(["description", "fabric", "care", "reviews"] as const).map((tab) => (
               <button
                 key={tab}

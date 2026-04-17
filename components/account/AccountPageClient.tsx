@@ -126,13 +126,13 @@ export default function AccountPageClient({ user }: { user: { name?: string; ema
           {showForm && (
             <form onSubmit={handleSave} className="border border-ivory-200 bg-white p-6 mb-6 space-y-4">
               <h3 className="font-playfair text-lg text-charcoal">New Address</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Full Name *" {...f("name")} required placeholder="Ayesha Khan" />
                 <Input label="Phone *" {...f("phone")} required placeholder="+91 900 000 0000" />
               </div>
               <Input label="Address Line 1 *" {...f("line1")} required placeholder="House No., Street" />
               <Input label="Address Line 2" {...f("line2")} placeholder="Area, Landmark (optional)" />
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Input label="City *" {...f("city")} required placeholder="Mumbai" />
                 <Input label="State *" {...f("state")} required placeholder="Maharashtra" />
                 <div className="relative">

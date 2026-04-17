@@ -97,7 +97,7 @@ export default function HelpPageClient() {
             <p className="font-inter text-sm text-charcoal-light">Send us a message and we'll respond within 24 hours.</p>
           </div>
           <form onSubmit={handleContact} className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="Name" value={contactForm.name} onChange={(e) => setContactForm(p => ({ ...p, name: e.target.value }))} required placeholder="Ayesha" />
               <Input label="Email" type="email" value={contactForm.email} onChange={(e) => setContactForm(p => ({ ...p, email: e.target.value }))} required placeholder="you@email.com" />
             </div>
