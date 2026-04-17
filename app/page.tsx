@@ -63,9 +63,9 @@ export default async function HomePage() {
       <Hero />
       <FeaturedCategories categories={categories} />
       <NewArrivalsStrip products={newArrivals} />
+      <LookbookGrid products={featuredProducts} />
       <BrandStory />
       <Testimonials />
-      <LookbookGrid products={featuredProducts} />
       <Newsletter />
     </MainLayout>
   );

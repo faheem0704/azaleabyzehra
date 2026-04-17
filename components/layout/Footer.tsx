@@ -120,10 +120,21 @@ export default async function Footer() {
       <div className="border-t border-ivory/10">
         <div className="section-padding py-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs font-inter text-ivory/40">© {new Date().getFullYear()} Azalea by Zehra. All rights reserved.</p>
-          <div className="flex items-center gap-6">
-            <img src="/visa.svg" alt="Visa" className="h-5 opacity-40" />
-            <img src="/mastercard.svg" alt="Mastercard" className="h-5 opacity-40" />
-            <img src="/razorpay.svg" alt="Razorpay" className="h-5 opacity-40" />
+          <div className="flex items-center gap-5 opacity-40">
+            {/* Visa */}
+            <svg viewBox="0 0 48 16" className="h-4 w-auto fill-current text-ivory" aria-label="Visa">
+              <path d="M18.7 1.2L15.5 14.8h-3.2L15.5 1.2h3.2zm13.4 8.8l1.7-4.6.9 4.6h-2.6zm3.6 4.8H39L36.5 1.2h-2.8c-.6 0-1.1.4-1.4 1l-4.8 12.6h3.3l.7-1.8h4l.5 1.8zm-8.1-4.6c0 3.3-4.6 3.5-4.6 3.5l-.4-2.3s2.8-.1 2.8-1.8c0-1-.9-1.2-1.9-1.3C22.2 8.1 20 7.3 20 4.9c0-3.1 4.4-3.5 4.4-3.5l.5 2.2s-2.6.1-2.6 1.6c0 .9.9 1.1 1.9 1.2 1.4.2 3.4.8 3.4 3.8zm-15.1-9L9 1.2H5.8L0 14.8h3.3l1.1-3h4.2l.6 3H12L12.5 1.2zm-4 8.9l1.5-4.2.8 4.2H8.5z"/>
+            </svg>
+            {/* Mastercard */}
+            <svg viewBox="0 0 38 24" className="h-5 w-auto" aria-label="Mastercard">
+              <circle cx="15" cy="12" r="10" fill="#EB001B" opacity="0.7"/>
+              <circle cx="23" cy="12" r="10" fill="#F79E1B" opacity="0.7"/>
+              <path d="M19 5.4a10 10 0 010 13.2A10 10 0 0119 5.4z" fill="#FF5F00" opacity="0.7"/>
+            </svg>
+            {/* Razorpay */}
+            <svg viewBox="0 0 64 20" className="h-4 w-auto fill-current text-ivory" aria-label="Razorpay">
+              <path d="M8.4 0L0 13.1h5.5L3.9 20l13.5-10.8h-6L14.5 0H8.4zm13.6 4.2h-2.4L17 9.8h2.1l.5-2h.4c1.8 0 3-.8 3-2.4 0-1-.7-1.2-1-1.2zm-.7 2.9h-.4l.3-1.5h.3c.5 0 .8.1.8.5 0 .6-.5 1-1 1zm4.2-2.9l-1.6 5.6h1.4l.3-1h1.5l.1 1h1.5l-1-5.6h-2.2zm.8 3.4l.5-1.9.3 1.9h-.8zm5.8-3.4h-1.5l-1.6 5.6h1.4l.5-1.8h.2l.6 1.8h1.6l-.8-2c.7-.3 1.2-.8 1.2-1.8 0-1.2-.8-1.8-1.6-1.8zm-.3 2.6h-.4l.3-1.4h.3c.5 0 .7.2.7.6 0 .5-.4.8-.9.8zm4.6-2.6h-1.4l-1.6 5.6h3.6l.3-1.2h-2.2l1.3-4.4zm3.2 0H38l-1 5.6h1.4l.4-2.3 1.5 2.3h1.6l-1.6-2.5 2.2-3.1h-1.6l-1.5 2.3.3-2.3zm5.7 0h-2.2L41.6 9.8H43l.3-1h1.5l.1 1h1.5l-1-5.6zm-.1 3.4l.5-1.9.3 1.9h-.8zm5.4-3.4c-1.8 0-3 1.3-3 3 0 1.6 1 2.8 2.7 2.8 1.8 0 3-1.3 3-3 0-1.6-1-2.8-2.7-2.8zm-.2 4.6c-.8 0-1.2-.6-1.2-1.6 0-1.1.6-1.8 1.3-1.8.8 0 1.2.6 1.2 1.6 0 1.1-.5 1.8-1.3 1.8zm6.7-4.6h-1.4l-1.6 5.6h1.4l.5-1.8h.2l.6 1.8H62l-.8-2c.7-.3 1.2-.8 1.2-1.8 0-1.2-.8-1.8-1.6-1.8zm-.3 2.6h-.4l.3-1.4h.3c.5 0 .7.2.7.6 0 .5-.4.8-.9.8z"/>
+            </svg>
           </div>
         </div>
       </div>

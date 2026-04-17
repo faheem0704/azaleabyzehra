@@ -34,7 +34,7 @@ export default function NewArrivalsStrip({ products }: NewArrivalsStripProps) {
           ease: "none",
           scrollTrigger: {
             trigger: section,
-            start: "top top",
+            start: "top 15%",
             end: () => `+=${totalWidth + 200}`,
             scrub: 1,
             pin: true,
@@ -51,7 +51,7 @@ export default function NewArrivalsStrip({ products }: NewArrivalsStripProps) {
 
   return (
     <section ref={sectionRef} className="overflow-hidden bg-ivory">
-      <div className="section-padding pt-24 pb-8 flex items-end justify-between">
+      <div className="section-padding pt-14 pb-4 flex items-end justify-between">
         <div>
           <motion.p
             initial={{ opacity: 0, y: 16 }}

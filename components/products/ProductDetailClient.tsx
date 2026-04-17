@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Heart, ShoppingBag, Share2, Star, ChevronRight, ChevronLeft } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Heart, ShoppingBag, Share2, Star, ChevronRight, ChevronLeft, X, ZoomIn } from "lucide-react";
 import { Product, ProductVariant } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cartStore";
@@ -28,6 +28,7 @@ export default function ProductDetailClient({ product, related }: Props) {
   const [selectedSize, setSelectedSize] = useState(product.sizes[0] || "");
   const [selectedColor, setSelectedColor] = useState(product.colors[0] || "");
   const [quantity, setQuantity] = useState(1);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const variants: ProductVariant[] = (product as any).variants ?? [];
 
@@ -186,6 +187,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                 onMouseMove={handleZoom}
                 onMouseEnter={() => setIsZoomed(true)}
                 onMouseLeave={() => setIsZoomed(false)}
+                onClick={() => setLightboxOpen(true)}
               >
                 {product.images[selectedImage] ? (
                   <Image
@@ -681,6 +683,77 @@ export default function ProductDetailClient({ product, related }: Props) {
         onClose={() => setIsSizeGuideOpen(false)}
         selectedSize={selectedSize}
       />
+
+      {/* ── Lightbox ───────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {lightboxOpen && product.images[selectedImage] && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90"
+            onClick={() => setLightboxOpen(false)}
+          >
+            {/* Close button */}
+            <button
+              className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white border border-white/20 hover:border-white/60 transition-colors"
+              onClick={() => setLightboxOpen(false)}
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Prev / Next in lightbox */}
+            {product.images.length > 1 && (
+              <>
+                <button
+                  className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white border border-white/20 hover:border-white/60 transition-colors"
+                  onClick={(e) => { e.stopPropagation(); setSelectedImage((i) => Math.max(0, i - 1)); }}
+                  disabled={selectedImage === 0}
+                  aria-label="Previous"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button
+                  className="absolute right-16 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white border border-white/20 hover:border-white/60 transition-colors"
+                  onClick={(e) => { e.stopPropagation(); setSelectedImage((i) => Math.min(product.images.length - 1, i + 1)); }}
+                  disabled={selectedImage === product.images.length - 1}
+                  aria-label="Next"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </>
+            )}
+
+            {/* Image */}
+            <motion.div
+              key={selectedImage}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2 }}
+              className="relative max-w-2xl max-h-[90vh] w-full mx-8"
+              onClick={(e) => e.stopPropagation()}
+              style={{ aspectRatio: "3/4" }}
+            >
+              <Image
+                src={product.images[selectedImage]}
+                alt={product.name}
+                fill
+                className="object-contain"
+                sizes="(max-width: 768px) 100vw, 672px"
+              />
+            </motion.div>
+
+            {/* Counter */}
+            {product.images.length > 1 && (
+              <p className="absolute bottom-4 left-1/2 -translate-x-1/2 font-inter text-xs text-white/50">
+                {selectedImage + 1} / {product.images.length}
+              </p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
