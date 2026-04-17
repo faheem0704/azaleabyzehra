@@ -53,6 +53,7 @@ export interface Product {
   stock: number;
   featured: boolean;
   isNewArrival: boolean;
+  isOnSale: boolean;
   createdAt: Date;
   reviews?: Review[];
   variants?: ProductVariant[];
@@ -207,6 +208,7 @@ export interface ProductFilters {
   search?: string;
   featured?: boolean;
   isNewArrival?: boolean;
+  isOnSale?: boolean;
 }
 
 // Payment types

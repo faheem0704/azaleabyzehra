@@ -15,14 +15,23 @@ async function getCategories() {
   });
 }
 
+async function getSalePageActive(): Promise<boolean> {
+  try {
+    const s = await prisma.settings.findFirst({ select: { salePageActive: true } });
+    return s?.salePageActive ?? false;
+  } catch {
+    return false;
+  }
+}
+
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
-  const categories = await getCategories();
+  const [categories, salePageActive] = await Promise.all([getCategories(), getSalePageActive()]);
 
   return (
     <SessionProvider>
       <CartSync />
       <AnnouncementBanner />
-      <Header categories={categories} />
+      <Header categories={categories} salePageActive={salePageActive} />
       <main className="min-h-screen">{children}</main>
       <Footer />
       <CartDrawer />

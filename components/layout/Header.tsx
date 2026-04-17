@@ -14,9 +14,10 @@ import { cn } from "@/lib/utils";
 
 interface HeaderProps {
   categories: Category[];
+  salePageActive?: boolean;
 }
 
-export default function Header({ categories }: HeaderProps) {
+export default function Header({ categories, salePageActive }: HeaderProps) {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
@@ -62,6 +63,7 @@ export default function Header({ categories }: HeaderProps) {
 
   const navLinks = [
     { label: "New Arrivals", href: "/new-arrivals" },
+    ...(salePageActive ? [{ label: "Sale", href: "/sale", sale: true }] : []),
     { label: "Orders", href: "/orders" },
     { label: "Help", href: "/help" },
   ];
@@ -160,7 +162,12 @@ export default function Header({ categories }: HeaderProps) {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="font-inter text-sm tracking-wide text-charcoal hover:text-rose-gold transition-colors duration-200 link-hover"
+                  className={cn(
+                    "font-inter text-sm tracking-wide transition-colors duration-200 link-hover",
+                    (link as { sale?: boolean }).sale
+                      ? "text-red-600 hover:text-red-700 font-semibold"
+                      : "text-charcoal hover:text-rose-gold"
+                  )}
                 >
                   {link.label}
                 </Link>
@@ -385,6 +392,7 @@ export default function Header({ categories }: HeaderProps) {
                 {[
                   { label: "All Products", href: "/products" },
                   { label: "New Arrivals", href: "/new-arrivals" },
+                  ...(salePageActive ? [{ label: "Sale", href: "/sale", sale: true }] : []),
                   ...categories.map((c) => ({ label: c.name, href: `/products?category=${c.slug}` })),
                   { label: "Orders", href: "/orders" },
                   { label: "Wishlist", href: "/wishlist" },
@@ -399,7 +407,12 @@ export default function Header({ categories }: HeaderProps) {
                     <Link
                       href={item.href}
                       onClick={closeMobileMenu}
-                      className="block py-3 font-inter text-lg text-charcoal hover:text-rose-gold transition-colors border-b border-ivory-200"
+                      className={cn(
+                        "block py-3 font-inter text-lg transition-colors border-b border-ivory-200",
+                        (item as { sale?: boolean }).sale
+                          ? "text-red-600 hover:text-red-700 font-semibold"
+                          : "text-charcoal hover:text-rose-gold"
+                      )}
                     >
                       {item.label}
                     </Link>

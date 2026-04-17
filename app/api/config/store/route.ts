@@ -21,6 +21,7 @@ export async function GET() {
     phone: s.phone,
     lowStockThreshold: s.lowStockThreshold,
     adminEmail: s.adminEmail,
+    salePageActive: s.salePageActive,
   });
 }
 
@@ -29,7 +30,7 @@ export async function PATCH(req: NextRequest) {
   if ((session?.user as { role?: string })?.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { storeName, contactEmail, whatsappNumber, address, phone, lowStockThreshold, adminEmail } = await req.json();
+  const { storeName, contactEmail, whatsappNumber, address, phone, lowStockThreshold, adminEmail, salePageActive } = await req.json();
 
   // BUG-18: lowStockThreshold must be a positive integer
   if (lowStockThreshold !== undefined) {
@@ -50,6 +51,7 @@ export async function PATCH(req: NextRequest) {
       phone,
       ...(lowStockThreshold !== undefined ? { lowStockThreshold: Number(lowStockThreshold) } : {}),
       ...(adminEmail !== undefined ? { adminEmail } : {}),
+      ...(salePageActive !== undefined ? { salePageActive } : {}),
     },
   });
   return NextResponse.json({
@@ -60,5 +62,6 @@ export async function PATCH(req: NextRequest) {
     phone: updated.phone,
     lowStockThreshold: updated.lowStockThreshold,
     adminEmail: updated.adminEmail,
+    salePageActive: updated.salePageActive,
   });
 }

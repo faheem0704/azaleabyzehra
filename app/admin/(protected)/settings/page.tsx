@@ -16,11 +16,16 @@ export default function AdminSettingsPage() {
     adminEmail: "",
   });
   const [saving, setSaving] = useState(false);
+  const [salePageActive, setSalePageActive] = useState(false);
+  const [saleSaving, setSaleSaving] = useState(false);
 
   useEffect(() => {
     fetch("/api/config/store")
       .then((r) => r.json())
-      .then((d) => setForm((p) => ({ ...p, ...d })))
+      .then((d) => {
+        setForm((p) => ({ ...p, ...d }));
+        if (typeof d.salePageActive === "boolean") setSalePageActive(d.salePageActive);
+      })
       .catch(() => {});
   }, []);
 
@@ -212,6 +217,53 @@ export default function AdminSettingsPage() {
           <Button type="submit" loading={shippingSaving}>Save Shipping Settings</Button>
         </div>
       </form>
+
+      {/* Sale Section */}
+      <div className="space-y-8 max-w-2xl mt-12">
+        <div className="bg-white border border-ivory-200 p-6 space-y-5">
+          <div>
+            <h2 className="font-playfair text-xl text-charcoal">Sale Section</h2>
+            <p className="font-inter text-xs text-mauve mt-1">
+              When active, a &quot;Sale&quot; tab appears in red on the navigation bar and a dedicated sale page goes live.
+            </p>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-inter text-sm text-charcoal font-medium">Sale Page</p>
+              <p className="font-inter text-xs text-mauve mt-0.5">
+                {salePageActive ? "Active — Sale tab is visible to customers" : "Inactive — Sale tab is hidden"}
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={saleSaving}
+              onClick={async () => {
+                setSaleSaving(true);
+                try {
+                  const next = !salePageActive;
+                  const res = await fetch("/api/config/store", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ salePageActive: next }),
+                  });
+                  if (!res.ok) throw new Error((await res.json()).error);
+                  setSalePageActive(next);
+                  toast.success(next ? "Sale section activated" : "Sale section deactivated");
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : "Failed to update");
+                } finally {
+                  setSaleSaving(false);
+                }
+              }}
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 focus:outline-none ${salePageActive ? "bg-red-500" : "bg-ivory-200"} disabled:opacity-50`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${salePageActive ? "translate-x-6" : "translate-x-1"}`}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Invite Admin */}
       <form onSubmit={handleInvite} className="space-y-8 max-w-2xl mt-12">

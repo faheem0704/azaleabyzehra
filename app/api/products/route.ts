@@ -56,6 +56,9 @@ export async function GET(req: NextRequest) {
   if (featured) where.featured = true;
   if (isNewArrival) where.isNewArrival = true;
 
+  const isOnSale = searchParams.get("isOnSale") === "true";
+  if (isOnSale) where.isOnSale = true;
+
   // BUG-14: popular sort now orders by actual order-item count descending
   const orderBy: Record<string, unknown> =
     sort === "price_asc"

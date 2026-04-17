@@ -19,7 +19,7 @@ interface Props {
 const EMPTY_FORM = {
   name: "", description: "", price: "", compareAtPrice: "",
   categoryId: "", sizes: "S,M,L,XL", colors: "Black,White",
-  fabric: "", featured: false, isNewArrival: false,
+  fabric: "", featured: false, isNewArrival: false, isOnSale: false,
 };
 
 type ImageEntry = { url: string; alt: string };
@@ -80,7 +80,7 @@ export default function AdminProductsClient({ products: initial, categories, low
       name: p.name, description: p.description, price: p.price.toString(),
       compareAtPrice: p.compareAtPrice?.toString() || "", categoryId: p.categoryId,
       sizes: p.sizes.join(","), colors: p.colors.join(","),
-      fabric: p.fabric || "", featured: p.featured, isNewArrival: p.isNewArrival,
+      fabric: p.fabric || "", featured: p.featured, isNewArrival: p.isNewArrival, isOnSale: p.isOnSale ?? false,
     });
     setImages(p.images.map((url, i) => ({ url, alt: p.imageAlts?.[i] ?? "" })));
 
@@ -148,6 +148,7 @@ export default function AdminProductsClient({ products: initial, categories, low
         stock: totalStock,
         featured: form.featured,
         isNewArrival: form.isNewArrival,
+        isOnSale: form.isOnSale,
         images: images.map((i) => i.url),
         imageAlts: images.map((i) => i.alt),
       };
@@ -308,6 +309,7 @@ export default function AdminProductsClient({ products: initial, categories, low
                     <div className="flex gap-2 flex-wrap">
                       {p.featured && <span className="text-[10px] font-inter bg-rose-gold/10 text-rose-gold px-2 py-0.5">Featured</span>}
                       {p.isNewArrival && <span className="text-[10px] font-inter bg-charcoal/10 text-charcoal px-2 py-0.5">New</span>}
+                      {(p as any).isOnSale && <span className="text-[10px] font-inter bg-red-100 text-red-600 px-2 py-0.5">Sale</span>}
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -453,7 +455,7 @@ export default function AdminProductsClient({ products: initial, categories, low
                     </div>
                   )}
 
-                  <div className="flex gap-6">
+                  <div className="flex gap-6 flex-wrap">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input type="checkbox" checked={form.featured} onChange={(e) => setForm(p => ({ ...p, featured: e.target.checked }))} className="w-4 h-4 accent-rose-gold" />
                       <span className="font-inter text-sm text-charcoal flex items-center gap-1"><Star size={14} className="text-rose-gold" /> Featured</span>
@@ -461,6 +463,10 @@ export default function AdminProductsClient({ products: initial, categories, low
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input type="checkbox" checked={form.isNewArrival} onChange={(e) => setForm(p => ({ ...p, isNewArrival: e.target.checked }))} className="w-4 h-4 accent-rose-gold" />
                       <span className="font-inter text-sm text-charcoal flex items-center gap-1"><Sparkles size={14} className="text-rose-gold" /> New Arrival</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" checked={form.isOnSale} onChange={(e) => setForm(p => ({ ...p, isOnSale: e.target.checked }))} className="w-4 h-4 accent-red-500" />
+                      <span className="font-inter text-sm text-red-600 flex items-center gap-1">On Sale</span>
                     </label>
                   </div>
                 </div>
