@@ -15,7 +15,6 @@ import Badge from "@/components/ui/Badge";
 import ProductCard from "./ProductCard";
 import RecentlyViewed, { trackProductView } from "./RecentlyViewed";
 import SizeGuideModal from "./SizeGuideModal";
-import SocialProofPopup from "./SocialProofPopup";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -675,12 +674,6 @@ export default function ProductDetailClient({ product, related }: Props) {
 
         <RecentlyViewed currentProductId={product.id} />
       </div>
-
-      {/* Social proof popup — renders globally fixed bottom-left */}
-      <SocialProofPopup
-        productName={product.name}
-        productImage={product.images[0]}
-      />
 
       <SizeGuideModal
         isOpen={isSizeGuideOpen}
