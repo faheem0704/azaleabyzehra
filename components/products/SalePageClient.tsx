@@ -102,7 +102,7 @@ export default function SalePageClient() {
   );
 
   return (
-    <div className="pt-24 lg:pt-32 pb-24">
+    <div className="pt-24 lg:pt-32 pb-24 overflow-x-hidden">
       {/* Page Header */}
       <div className="section-padding mb-4 lg:mb-10">
         <motion.p

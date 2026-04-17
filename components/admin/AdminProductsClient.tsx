@@ -52,7 +52,7 @@ export default function AdminProductsClient({ products: initial, categories, low
     for (const s of sizes) {
       for (const c of colors) {
         const k = vkey(s, c);
-        newStock[k] = variantStock[k] ?? 0;
+        newStock[k] = variantStock[k] ?? (editingProduct ? 0 : 3);
         newSku[k] = variantSku[k] ?? "";
       }
     }
@@ -68,7 +68,7 @@ export default function AdminProductsClient({ products: initial, categories, low
     const colors = EMPTY_FORM.colors.split(",").map(c => c.trim()).filter(Boolean);
     const stock: Record<string, number> = {};
     const sku: Record<string, string> = {};
-    for (const s of sizes) for (const c of colors) { stock[vkey(s, c)] = 0; sku[vkey(s, c)] = ""; }
+    for (const s of sizes) for (const c of colors) { stock[vkey(s, c)] = 3; sku[vkey(s, c)] = ""; }
     setVariantStock(stock);
     setVariantSku(sku);
     setIsModalOpen(true);
