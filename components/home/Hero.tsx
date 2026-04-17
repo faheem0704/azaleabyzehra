@@ -128,7 +128,11 @@ export default function Hero() {
       />
 
       {/* ── Gradient overlays ────────────────────────────────────────────── */}
+      {/* Main cinematic overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-charcoal-dark/60 via-charcoal-dark/40 to-charcoal-dark/80 pointer-events-none" style={{ zIndex: 2 }} />
+      {/* Header legibility band — darkens only the top 160px where the nav sits */}
+      <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-black/55 to-transparent pointer-events-none" style={{ zIndex: 2 }} />
+      {/* Bottom fade into page */}
       <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-ivory to-transparent pointer-events-none" style={{ zIndex: 3 }} />
 
       {/* ── Content ──────────────────────────────────────────────────────── */}
