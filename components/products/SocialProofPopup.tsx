@@ -5,19 +5,35 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { ShoppingBag, X } from "lucide-react";
 
-const CITIES = [
-  "Mumbai", "Delhi", "Jaipur", "Bangalore", "Chennai", "Hyderabad",
-  "Kolkata", "Pune", "Ahmedabad", "Surat", "Lucknow", "Chandigarh",
-  "Bhopal", "Indore", "Kochi", "Vadodara", "Agra", "Nashik",
-  "Amritsar", "Jodhpur", "Udaipur", "Coimbatore", "Vizag", "Nagpur",
+// 80% of popups will show a Kerala city, 20% from the rest of India
+const KERALA_CITIES = [
+  "Kochi", "Thiruvananthapuram", "Kozhikode", "Thrissur", "Kannur",
+  "Kollam", "Alappuzha", "Palakkad", "Malappuram", "Kottayam",
+  "Ernakulam", "Kasaragod", "Calicut", "Munnar", "Guruvayur",
+  "Thalassery", "Perinthalmanna", "Changanacherry", "Pathanamthitta", "Wayanad",
+];
+
+const OTHER_CITIES = [
+  "Mumbai", "Delhi", "Bangalore", "Chennai", "Hyderabad",
+  "Pune", "Ahmedabad", "Surat", "Jaipur", "Lucknow",
+  "Coimbatore", "Mangalore", "Mysore", "Goa",
 ];
 
 const NAMES = [
-  "Priya", "Anjali", "Neha", "Sneha", "Pooja", "Kavita", "Ritika",
-  "Ananya", "Deepika", "Meera", "Riya", "Shreya", "Sakshi", "Divya",
-  "Komal", "Nandini", "Priyanka", "Shweta", "Simran", "Zara",
-  "Fatima", "Ayesha", "Sara", "Noor", "Hina", "Isha", "Tanvi",
+  // Kerala names
+  "Priya", "Anjali", "Nisha", "Sreelakshmi", "Athira", "Arya",
+  "Lakshmi", "Meera", "Asha", "Deepa", "Nanditha", "Kavya",
+  "Sreeja", "Remya", "Jisha", "Neethu", "Sindhu", "Parvathy",
+  "Aparna", "Divya", "Riya", "Manju", "Swathy", "Reshma",
+  // Other Indian names
+  "Sneha", "Pooja", "Ananya", "Sakshi", "Komal", "Priyanka",
+  "Fatima", "Ayesha", "Sara", "Noor", "Simran", "Tanvi",
 ];
+
+const pickCity = () =>
+  Math.random() < 0.8
+    ? KERALA_CITIES[Math.floor(Math.random() * KERALA_CITIES.length)]
+    : OTHER_CITIES[Math.floor(Math.random() * OTHER_CITIES.length)];
 
 interface Props {
   productName: string;
@@ -35,17 +51,17 @@ export default function SocialProofPopup({ productName, productImage }: Props) {
     const show = () => {
       setInfo({
         name: NAMES[Math.floor(Math.random() * NAMES.length)],
-        city: CITIES[Math.floor(Math.random() * CITIES.length)],
+        city: pickCity(),
         minutesAgo: Math.floor(Math.random() * 20) + 1,
       });
       setVisible(true);
       hideTimer = setTimeout(() => setVisible(false), 5000);
-      // Schedule next appearance 20–35 seconds after current one hides
-      nextTimer = setTimeout(show, 5000 + Math.random() * 15000 + 20000);
+      // Next popup 1–2 minutes after current one hides
+      nextTimer = setTimeout(show, 5000 + Math.random() * 60000 + 60000);
     };
 
-    // First popup after 6–10 seconds
-    nextTimer = setTimeout(show, Math.random() * 4000 + 6000);
+    // First popup after 8–12 seconds
+    nextTimer = setTimeout(show, Math.random() * 4000 + 8000);
 
     return () => {
       clearTimeout(hideTimer);
