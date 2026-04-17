@@ -66,6 +66,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${playfair.variable} ${inter.variable}`}>
+      <head>
+        {/* Cloudinary serves all product images and videos — preconnect saves 100-300ms on first resource */}
+        <link rel="preconnect" href="https://res.cloudinary.com" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+      </head>
       <body className="antialiased overflow-x-hidden">
         {children}
         <Toaster

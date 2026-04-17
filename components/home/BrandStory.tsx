@@ -15,8 +15,10 @@ export default function BrandStory() {
         <div className="relative aspect-[4/5] overflow-hidden">
           <motion.div style={{ y }} className="absolute inset-[-10%]">
             <img
-              src="https://res.cloudinary.com/dtwjd2xuy/image/upload/v1776427657/ChatGPT_Image_Apr_17_2026_05_26_56_PM_pezxaw.png"
+              src="https://res.cloudinary.com/dtwjd2xuy/image/upload/f_auto,q_auto,w_600/v1776427657/ChatGPT_Image_Apr_17_2026_05_26_56_PM_pezxaw.png"
               alt="Indian ethnic wear craftsmanship"
+              width={600}
+              height={750}
               className="w-full h-full object-cover"
             />
           </motion.div>

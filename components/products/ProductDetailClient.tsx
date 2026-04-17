@@ -213,6 +213,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                 {product.images.length > 1 && (
                   <>
                     <button
+                      aria-label="Previous image"
                       onClick={() => setSelectedImage((i) => Math.max(0, i - 1))}
                       disabled={selectedImage === 0}
                       className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 disabled:opacity-0 hover:bg-white"
@@ -220,6 +221,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                       <ChevronLeft size={18} className="text-charcoal" />
                     </button>
                     <button
+                      aria-label="Next image"
                       onClick={() => setSelectedImage((i) => Math.min(product.images.length - 1, i + 1))}
                       disabled={selectedImage === product.images.length - 1}
                       className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 disabled:opacity-0 hover:bg-white"
@@ -286,6 +288,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                     {product.images.map((_, i) => (
                       <button
                         key={i}
+                        aria-label={`View image ${i + 1}`}
                         onClick={() => setSelectedImage(i)}
                         className={`rounded-full transition-all duration-200 ${
                           i === selectedImage ? "w-4 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"
