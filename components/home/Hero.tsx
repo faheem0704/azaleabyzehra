@@ -12,16 +12,20 @@ gsap.registerPlugin(SplitText, ScrollTrigger);
 
 const VIDEOS = [
   {
-    webm: "https://res.cloudinary.com/dtwjd2xuy/video/upload/v1776445195/video1_xz1m2i.webm",
-    mp4:  "https://res.cloudinary.com/dtwjd2xuy/video/upload/v1776445195/video1_optimized_v1kqkh.mp4",
+    webm:   "https://res.cloudinary.com/dtwjd2xuy/video/upload/v1776445195/video1_xz1m2i.webm",
+    mp4:    "https://res.cloudinary.com/dtwjd2xuy/video/upload/v1776445195/video1_optimized_v1kqkh.mp4",
+    // Cloudinary auto-generates a JPEG thumbnail from the first frame (so_0)
+    poster: "https://res.cloudinary.com/dtwjd2xuy/video/upload/so_0,w_1280,q_80/v1776445195/video1_optimized_v1kqkh.jpg",
   },
   {
-    webm: "https://res.cloudinary.com/dtwjd2xuy/video/upload/v1776445195/video2_k2hyco.webm",
-    mp4:  "https://res.cloudinary.com/dtwjd2xuy/video/upload/v1776445196/video2_optimized_ixwl3o.mp4",
+    webm:   "https://res.cloudinary.com/dtwjd2xuy/video/upload/v1776445195/video2_k2hyco.webm",
+    mp4:    "https://res.cloudinary.com/dtwjd2xuy/video/upload/v1776445196/video2_optimized_ixwl3o.mp4",
+    poster: "https://res.cloudinary.com/dtwjd2xuy/video/upload/so_0,w_1280,q_80/v1776445196/video2_optimized_ixwl3o.jpg",
   },
   {
-    webm: "https://res.cloudinary.com/dtwjd2xuy/video/upload/v1776445195/video3_bltlba.webm",
-    mp4:  "https://res.cloudinary.com/dtwjd2xuy/video/upload/v1776445196/video3_optimized_ikpmqy.mp4",
+    webm:   "https://res.cloudinary.com/dtwjd2xuy/video/upload/v1776445195/video3_bltlba.webm",
+    mp4:    "https://res.cloudinary.com/dtwjd2xuy/video/upload/v1776445196/video3_optimized_ikpmqy.mp4",
+    poster: "https://res.cloudinary.com/dtwjd2xuy/video/upload/so_0,w_1280,q_80/v1776445196/video3_optimized_ikpmqy.jpg",
   },
 ];
 
@@ -101,7 +105,8 @@ export default function Hero() {
           ref={el => { videoRefs.current[i] = el; }}
           muted
           playsInline
-          preload={i === 0 ? "auto" : "metadata"}
+          poster={v.poster}
+          preload={i === 0 ? "metadata" : "none"}
           onEnded={() => { if (i === activeIdxRef.current) goToRef.current(i + 1); }}
           className="absolute inset-0 w-full h-full object-cover"
           style={{
