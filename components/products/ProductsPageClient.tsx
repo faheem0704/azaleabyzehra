@@ -180,13 +180,12 @@ export default function ProductsPageClient() {
         </div>
       </div>
 
-      {/* ── Mobile / tablet layout: edge-to-edge 2-col grid ── */}
-      {/* Bleeds out of section-padding (px-6 mobile / px-12 tablet) to keep images wide */}
-      <div className="lg:hidden overflow-x-hidden -mx-6 md:-mx-12 px-2 md:px-2">
+      {/* ── Mobile / tablet layout ── */}
+      <div className="lg:hidden px-3 md:px-6">
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">{skeletons}</div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">{skeletons}</div>
         ) : products.length === 0 ? (
-          <div className="text-center py-24 px-6">
+          <div className="text-center py-24">
             <p className="font-playfair text-2xl text-charcoal-light mb-4">No products found</p>
             <p className="font-inter text-sm text-mauve mb-8">
               Try adjusting your filters or browse our full collection
@@ -195,7 +194,7 @@ export default function ProductsPageClient() {
           </div>
         ) : (
           <>
-            {productGrid("gap-2 md:gap-3 md:grid-cols-3")}
+            {productGrid("gap-3 md:gap-4 md:grid-cols-3")}
             {pagination}
           </>
         )}

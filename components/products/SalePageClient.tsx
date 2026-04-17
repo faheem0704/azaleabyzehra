@@ -102,7 +102,7 @@ export default function SalePageClient() {
   );
 
   return (
-    <div className="pt-24 lg:pt-32 pb-24 overflow-x-hidden">
+    <div className="pt-24 lg:pt-32 pb-24">
       {/* Page Header */}
       <div className="section-padding mb-4 lg:mb-10">
         <motion.p
@@ -170,18 +170,18 @@ export default function SalePageClient() {
       </div>
 
       {/* Mobile layout */}
-      <div className="lg:hidden -mx-6 md:-mx-12 px-2 md:px-2">
+      <div className="lg:hidden px-3 md:px-6">
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">{skeletons}</div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">{skeletons}</div>
         ) : products.length === 0 ? (
-          <div className="text-center py-24 px-6">
+          <div className="text-center py-24">
             <p className="font-playfair text-2xl text-charcoal-light mb-4">No sale products yet</p>
             <p className="font-inter text-sm text-mauve mb-8">Check back soon for our latest offers</p>
             <button onClick={handleReset} className="btn-outline">Clear Filters</button>
           </div>
         ) : (
           <>
-            {productGrid("gap-2 md:gap-3 md:grid-cols-3")}
+            {productGrid("gap-3 md:gap-4 md:grid-cols-3")}
             {pagination}
           </>
         )}
