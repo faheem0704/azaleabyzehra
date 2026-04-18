@@ -41,13 +41,13 @@ export async function GET() {
     }),
     prisma.$queryRaw`
       SELECT
-        DATE_TRUNC('month', "created_at") as month,
-        SUM("total_amount") as revenue,
+        DATE_TRUNC('month', "createdAt") as month,
+        SUM("totalAmount") as revenue,
         COUNT(*) as orders
       FROM orders
-      WHERE "payment_status" = 'PAID'
-        AND "created_at" >= NOW() - INTERVAL '6 months'
-      GROUP BY DATE_TRUNC('month', "created_at")
+      WHERE "paymentStatus" = 'PAID'
+        AND "createdAt" >= NOW() - INTERVAL '6 months'
+      GROUP BY DATE_TRUNC('month', "createdAt")
       ORDER BY month ASC
     `,
   ]);

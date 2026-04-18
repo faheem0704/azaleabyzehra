@@ -258,7 +258,7 @@ export default function AdminProductsClient({ products: initial, categories, low
       <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <div>
           <h1 className="font-playfair text-3xl text-charcoal">Products</h1>
-          <p className="font-inter text-sm text-charcoal-light mt-1">{products.length} products</p>
+          <p className="font-inter text-sm text-charcoal-light mt-1">{totalCount} products</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {/* CSV */}

@@ -8,17 +8,19 @@ export default async function ReportsPage() {
   const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
 
   // SQL aggregation: bucket revenue + order count by month in a single query
+  // NOTE: Prisma maps camelCase field names directly to the DB without snake_case conversion,
+  // so the actual PostgreSQL columns are "totalAmount" and "createdAt" (quoted camelCase).
   type MonthRow = { month: Date; revenue: number; order_count: bigint };
   const [monthRows, orderItemGroups, statusBreakdown, summaryRow] = await Promise.all([
     prisma.$queryRaw<MonthRow[]>`
       SELECT
-        DATE_TRUNC('month', created_at) AS month,
-        SUM(total_amount)               AS revenue,
-        COUNT(*)                        AS order_count
+        DATE_TRUNC('month', "createdAt") AS month,
+        SUM("totalAmount")               AS revenue,
+        COUNT(*)                         AS order_count
       FROM orders
-      WHERE created_at >= ${twelveMonthsAgo}
+      WHERE "createdAt" >= ${twelveMonthsAgo}
         AND status != 'CANCELLED'
-      GROUP BY DATE_TRUNC('month', created_at)
+      GROUP BY DATE_TRUNC('month', "createdAt")
       ORDER BY month ASC
     `,
     prisma.orderItem.groupBy({
@@ -30,9 +32,9 @@ export default async function ReportsPage() {
     }),
     prisma.order.groupBy({ by: ["status"], _count: { id: true } }),
     prisma.$queryRaw<{ total_revenue: number; total_orders: bigint }[]>`
-      SELECT SUM(total_amount) AS total_revenue, COUNT(*) AS total_orders
+      SELECT SUM("totalAmount") AS total_revenue, COUNT(*) AS total_orders
       FROM orders
-      WHERE created_at >= ${twelveMonthsAgo}
+      WHERE "createdAt" >= ${twelveMonthsAgo}
         AND status != 'CANCELLED'
     `,
   ]);
@@ -79,7 +81,7 @@ export default async function ReportsPage() {
       topProducts={topProducts}
       statusBreakdown={statusBreakdown.map((s) => ({ status: s.status, count: s._count.id }))}
       summary={{
-        totalRevenue: Math.round(totalRevenue),
+        totalRevenue,
         totalOrders,
         avgOrderValue: totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0,
       }}

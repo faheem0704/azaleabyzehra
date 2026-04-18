@@ -45,26 +45,29 @@ export default function ProductsPageClient({ initialProducts, initialTotal, init
 
   const fetchProducts = useCallback(async (currentPage = 1, currentFilters = filters) => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (searchParams.get("category")) params.set("category", searchParams.get("category")!);
-    if (searchParams.get("search")) params.set("search", searchParams.get("search")!);
-    if (searchParams.get("featured")) params.set("featured", "true");
-    if (searchParams.get("isNewArrival")) params.set("isNewArrival", "true");
-    if (currentFilters.minPrice) params.set("minPrice", currentFilters.minPrice);
-    if (currentFilters.maxPrice) params.set("maxPrice", currentFilters.maxPrice);
-    if (currentFilters.colors.length) params.set("colors", currentFilters.colors.join(","));
-    if (currentFilters.sizes.length) params.set("sizes", currentFilters.sizes.join(","));
-    if (currentFilters.fabric) params.set("fabric", currentFilters.fabric);
-    params.set("sort", currentFilters.sort);
-    params.set("page", currentPage.toString());
-    params.set("pageSize", "12");
+    try {
+      const params = new URLSearchParams();
+      if (searchParams.get("category")) params.set("category", searchParams.get("category")!);
+      if (searchParams.get("search")) params.set("search", searchParams.get("search")!);
+      if (searchParams.get("featured")) params.set("featured", "true");
+      if (searchParams.get("isNewArrival")) params.set("isNewArrival", "true");
+      if (currentFilters.minPrice) params.set("minPrice", currentFilters.minPrice);
+      if (currentFilters.maxPrice) params.set("maxPrice", currentFilters.maxPrice);
+      if (currentFilters.colors.length) params.set("colors", currentFilters.colors.join(","));
+      if (currentFilters.sizes.length) params.set("sizes", currentFilters.sizes.join(","));
+      if (currentFilters.fabric) params.set("fabric", currentFilters.fabric);
+      params.set("sort", currentFilters.sort);
+      params.set("page", currentPage.toString());
+      params.set("pageSize", "12");
 
-    const res = await fetch(`/api/products?${params}`);
-    const data = await res.json();
-    setProducts(data.data || []);
-    setTotal(data.total || 0);
-    setTotalPages(data.totalPages || 1);
-    setLoading(false);
+      const res = await fetch(`/api/products?${params}`);
+      const data = await res.json();
+      setProducts(data.data || []);
+      setTotal(data.total || 0);
+      setTotalPages(data.totalPages || 1);
+    } finally {
+      setLoading(false);
+    }
   }, [filters, searchParams]);
 
   const isFirstRender = useRef(true);

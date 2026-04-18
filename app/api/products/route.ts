@@ -78,29 +78,16 @@ export async function GET(req: NextRequest) {
   let products: any[];
 
   if (isPopular) {
-    // Single LEFT JOIN + GROUP BY to rank by order count — avoids Prisma's
-    // per-product subquery approach. The @@index([productId]) on OrderItem
-    // makes this fast even with many order rows.
-    const popularIds = await prisma.$queryRaw<{ id: string }[]>`
-      SELECT p.id
-      FROM products p
-      LEFT JOIN order_items oi ON oi.product_id = p.id
-      WHERE p.is_deleted = false
-      GROUP BY p.id
-      ORDER BY COUNT(oi.id) DESC
-      LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}
-    `.catch(() => [] as { id: string }[]);
-
-    const idList = popularIds.map((r) => r.id);
+    // Order by number of order items — Prisma relation count orderBy respects
+    // all active WHERE filters and handles pagination correctly.
     [total, products] = await Promise.all([
       prisma.product.count({ where }),
       prisma.product.findMany({
-        where: { ...where, id: { in: idList } },
+        where,
         select: productSelect,
-      }).then((rows) => {
-        // Re-sort to match the popularity order from the raw query
-        const order = new Map(idList.map((id, i) => [id, i]));
-        return rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+        orderBy: { orderItems: { _count: "desc" } },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
       }),
     ]);
   } else {

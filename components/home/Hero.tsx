@@ -41,8 +41,11 @@ export default function Hero() {
   // ── GSAP text animations (lazy-loaded to keep GSAP out of main bundle) ──
   useEffect(() => {
     let ctx: any;
+    let cancelled = false;
     import("gsap").then(({ gsap }) => {
       import("gsap/SplitText").then(({ SplitText }) => {
+        // Component may have unmounted before the dynamic import resolved
+        if (cancelled) return;
         gsap.registerPlugin(SplitText);
         ctx = gsap.context(() => {
           const tl = gsap.timeline({ delay: 0.3 });
@@ -56,7 +59,10 @@ export default function Hero() {
         });
       });
     });
-    return () => ctx?.revert();
+    return () => {
+      cancelled = true;
+      ctx?.revert();
+    };
   }, []);
 
   // ── Boot: play first video on mount ─────────────────────────────────────
