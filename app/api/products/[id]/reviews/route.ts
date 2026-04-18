@@ -8,9 +8,20 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: "Please sign in to leave a review" }, { status: 401 });
   }
 
-  const { rating, comment } = await req.json();
+  const { rating, comment, images } = await req.json();
   if (!rating || rating < 1 || rating > 5) {
     return NextResponse.json({ error: "Rating must be between 1 and 5" }, { status: 400 });
+  }
+  if (images !== undefined) {
+    if (!Array.isArray(images) || images.length > 5) {
+      return NextResponse.json({ error: "You can upload a maximum of 5 photos" }, { status: 400 });
+    }
+    const allValidUrls = images.every(
+      (img: unknown) => typeof img === "string" && img.startsWith("https://")
+    );
+    if (!allValidUrls) {
+      return NextResponse.json({ error: "Invalid image URL" }, { status: 400 });
+    }
   }
 
   // BUG-11: only allow reviews from users who have received this product
@@ -41,6 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       productId: params.id,
       rating: Number(rating),
       comment: comment?.trim() || null,
+      images: images ?? [],
     },
     include: { user: { select: { name: true, id: true } } },
   });

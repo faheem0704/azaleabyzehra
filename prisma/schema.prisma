@@ -244,6 +244,7 @@ model Review {
   productId String
   rating    Int
   comment   String?
+  images    String[]
   createdAt DateTime @default(now())
 
   user    User    @relation(fields: [userId], references: [id])

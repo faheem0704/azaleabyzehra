@@ -133,6 +133,7 @@ export interface Review {
   productId: string;
   rating: number;
   comment: string | null;
+  images?: string[];
   createdAt: Date;
 }
 
