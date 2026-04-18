@@ -120,20 +120,21 @@ export default async function Footer() {
       <div className="border-t border-ivory/10">
         <div className="section-padding py-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs font-inter text-ivory/40">© {new Date().getFullYear()} Azalea by Zehra. All rights reserved.</p>
-          <div className="flex items-center gap-5 opacity-40">
+          <div className="flex items-center gap-5">
             {/* Visa */}
-            <svg viewBox="0 0 48 16" className="h-4 w-auto fill-current text-ivory" aria-label="Visa">
-              <path d="M18.7 1.2L15.5 14.8h-3.2L15.5 1.2h3.2zm13.4 8.8l1.7-4.6.9 4.6h-2.6zm3.6 4.8H39L36.5 1.2h-2.8c-.6 0-1.1.4-1.4 1l-4.8 12.6h3.3l.7-1.8h4l.5 1.8zm-8.1-4.6c0 3.3-4.6 3.5-4.6 3.5l-.4-2.3s2.8-.1 2.8-1.8c0-1-.9-1.2-1.9-1.3C22.2 8.1 20 7.3 20 4.9c0-3.1 4.4-3.5 4.4-3.5l.5 2.2s-2.6.1-2.6 1.6c0 .9.9 1.1 1.9 1.2 1.4.2 3.4.8 3.4 3.8zm-15.1-9L9 1.2H5.8L0 14.8h3.3l1.1-3h4.2l.6 3H12L12.5 1.2zm-4 8.9l1.5-4.2.8 4.2H8.5z"/>
+            <svg role="img" viewBox="0 0 24 24" className="h-8 w-auto" aria-label="Visa" xmlns="http://www.w3.org/2000/svg" fill="white">
+              <path d="M9.112 8.262L5.97 15.758H3.92L2.374 9.775c-.094-.368-.175-.503-.461-.658C1.447 8.864.677 8.627 0 8.479l.046-.217h3.3a.904.904 0 01.894.764l.817 4.338 2.018-5.102zm8.033 5.049c.008-1.979-2.736-2.088-2.717-2.972.006-.269.262-.555.822-.628a3.66 3.66 0 011.913.336l.34-1.59a5.207 5.207 0 00-1.814-.333c-1.917 0-3.266 1.02-3.278 2.479-.012 1.079.963 1.68 1.698 2.04.756.367 1.01.603 1.006.931-.005.504-.602.725-1.16.734-.975.015-1.54-.263-1.992-.473l-.351 1.642c.453.208 1.289.39 2.156.398 2.037 0 3.37-1.006 3.377-2.564m5.061 2.447H24l-1.565-7.496h-1.656a.883.883 0 00-.826.55l-2.909 6.946h2.036l.405-1.12h2.488zm-2.163-2.656l1.02-2.815.588 2.815zm-8.16-4.84l-1.603 7.496H8.34l1.605-7.496z"/>
             </svg>
             {/* Mastercard */}
-            <svg viewBox="0 0 38 24" className="h-5 w-auto" aria-label="Mastercard">
-              <circle cx="15" cy="12" r="10" fill="#EB001B" opacity="0.7"/>
-              <circle cx="23" cy="12" r="10" fill="#F79E1B" opacity="0.7"/>
-              <path d="M19 5.4a10 10 0 010 13.2A10 10 0 0119 5.4z" fill="#FF5F00" opacity="0.7"/>
+            <svg viewBox="0 0 38 24" className="h-8 w-auto" aria-label="Mastercard" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="15" cy="12" r="9" fill="#EB001B"/>
+              <circle cx="23" cy="12" r="9" fill="#F79E1B"/>
+              <path d="M19 4.873A9 9 0 0 1 22.127 12 9 9 0 0 1 19 19.127 9 9 0 0 1 15.873 12 9 9 0 0 1 19 4.873z" fill="#FF5F00"/>
             </svg>
             {/* Razorpay */}
-            <svg viewBox="0 0 64 20" className="h-4 w-auto fill-current text-ivory" aria-label="Razorpay">
-              <path d="M8.4 0L0 13.1h5.5L3.9 20l13.5-10.8h-6L14.5 0H8.4zm13.6 4.2h-2.4L17 9.8h2.1l.5-2h.4c1.8 0 3-.8 3-2.4 0-1-.7-1.2-1-1.2zm-.7 2.9h-.4l.3-1.5h.3c.5 0 .8.1.8.5 0 .6-.5 1-1 1zm4.2-2.9l-1.6 5.6h1.4l.3-1h1.5l.1 1h1.5l-1-5.6h-2.2zm.8 3.4l.5-1.9.3 1.9h-.8zm5.8-3.4h-1.5l-1.6 5.6h1.4l.5-1.8h.2l.6 1.8h1.6l-.8-2c.7-.3 1.2-.8 1.2-1.8 0-1.2-.8-1.8-1.6-1.8zm-.3 2.6h-.4l.3-1.4h.3c.5 0 .7.2.7.6 0 .5-.4.8-.9.8zm4.6-2.6h-1.4l-1.6 5.6h3.6l.3-1.2h-2.2l1.3-4.4zm3.2 0H38l-1 5.6h1.4l.4-2.3 1.5 2.3h1.6l-1.6-2.5 2.2-3.1h-1.6l-1.5 2.3.3-2.3zm5.7 0h-2.2L41.6 9.8H43l.3-1h1.5l.1 1h1.5l-1-5.6zm-.1 3.4l.5-1.9.3 1.9h-.8zm5.4-3.4c-1.8 0-3 1.3-3 3 0 1.6 1 2.8 2.7 2.8 1.8 0 3-1.3 3-3 0-1.6-1-2.8-2.7-2.8zm-.2 4.6c-.8 0-1.2-.6-1.2-1.6 0-1.1.6-1.8 1.3-1.8.8 0 1.2.6 1.2 1.6 0 1.1-.5 1.8-1.3 1.8zm6.7-4.6h-1.4l-1.6 5.6h1.4l.5-1.8h.2l.6 1.8H62l-.8-2c.7-.3 1.2-.8 1.2-1.8 0-1.2-.8-1.8-1.6-1.8zm-.3 2.6h-.4l.3-1.4h.3c.5 0 .7.2.7.6 0 .5-.4.8-.9.8z"/>
+            <svg role="img" viewBox="0 0 24 24" className="h-8 w-auto" aria-label="Razorpay" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22.436 0l-11.91 7.773-1.174 4.276 6.625-4.297L11.65 24h4.391l6.395-24z" fill="#3395FF"/>
+              <path d="M14.26 10.098L3.389 17.166 1.564 24h9.008l3.688-13.902Z" fill="#072654"/>
             </svg>
           </div>
         </div>
