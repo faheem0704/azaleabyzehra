@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,6 +31,11 @@ export default function ProductDetailClient({ product, related }: Props) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const variants: ProductVariant[] = (product as any).variants ?? [];
+  const colorImgs = (product.colorImages ?? {}) as Record<string, string[]>;
+  const displayImages = useMemo(
+    () => colorImgs[selectedColor]?.length > 0 ? colorImgs[selectedColor] : product.images,
+    [selectedColor, product.colorImages, product.images]
+  );
 
   // Get stock for a specific size+color combination
   const getVariantStock = (size: string, color: string): number | null => {
@@ -68,7 +73,7 @@ export default function ProductDetailClient({ product, related }: Props) {
   const handleTouchEnd = (e: React.TouchEvent) => {
     const diff = touchStartX.current - e.changedTouches[0].clientX;
     if (Math.abs(diff) < 40) return; // ignore taps
-    if (diff > 0) setSelectedImage((i) => Math.min(product.images.length - 1, i + 1));
+    if (diff > 0) setSelectedImage((i) => Math.min(displayImages.length - 1, i + 1));
     else setSelectedImage((i) => Math.max(0, i - 1));
   };
 
@@ -166,9 +171,9 @@ export default function ProductDetailClient({ product, related }: Props) {
             {/* ── Desktop: thumbnails left + main image with arrows + zoom ── */}
             <div className="hidden lg:flex gap-4">
               {/* Thumbnail strip */}
-              {product.images.length > 1 && (
+              {displayImages.length > 1 && (
                 <div className="flex flex-col gap-3 w-20 flex-shrink-0">
-                  {product.images.map((img, i) => (
+                  {displayImages.map((img, i) => (
                     <button
                       key={i}
                       onClick={() => setSelectedImage(i)}
@@ -190,7 +195,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                 onClick={() => setLightboxOpen(true)}
               >
                 <AnimatePresence mode="wait" initial={false}>
-                  {product.images[selectedImage] ? (
+                  {displayImages[selectedImage] ? (
                     <motion.div
                       key={selectedImage}
                       initial={{ opacity: 0 }}
@@ -205,7 +210,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                       }}
                     >
                       <Image
-                        src={product.images[selectedImage]}
+                        src={displayImages[selectedImage]}
                         alt={product.name}
                         fill
                         priority
@@ -225,7 +230,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                 </div>
 
                 {/* Prev / Next arrows */}
-                {product.images.length > 1 && (
+                {displayImages.length > 1 && (
                   <>
                     <button
                       aria-label="Previous image"
@@ -237,8 +242,8 @@ export default function ProductDetailClient({ product, related }: Props) {
                     </button>
                     <button
                       aria-label="Next image"
-                      onClick={() => setSelectedImage((i) => Math.min(product.images.length - 1, i + 1))}
-                      disabled={selectedImage === product.images.length - 1}
+                      onClick={() => setSelectedImage((i) => Math.min(displayImages.length - 1, i + 1))}
+                      disabled={selectedImage === displayImages.length - 1}
                       className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 disabled:opacity-0 hover:bg-white"
                     >
                       <ChevronRight size={18} className="text-charcoal" />
@@ -247,9 +252,9 @@ export default function ProductDetailClient({ product, related }: Props) {
                 )}
 
                 {/* Image counter */}
-                {product.images.length > 1 && (
+                {displayImages.length > 1 && (
                   <div className="absolute bottom-4 right-4 bg-charcoal/60 text-ivory text-xs font-inter px-2 py-0.5 rounded-full">
-                    {selectedImage + 1} / {product.images.length}
+                    {selectedImage + 1} / {displayImages.length}
                   </div>
                 )}
               </div>
@@ -263,7 +268,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                 onTouchEnd={handleTouchEnd}
               >
                 <AnimatePresence mode="wait" initial={false}>
-                  {product.images[selectedImage] ? (
+                  {displayImages[selectedImage] ? (
                     <motion.div
                       key={selectedImage}
                       initial={{ opacity: 0 }}
@@ -273,7 +278,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                       className="absolute inset-0"
                     >
                       <Image
-                        src={product.images[selectedImage]}
+                        src={displayImages[selectedImage]}
                         alt={product.name}
                         fill
                         priority
@@ -293,7 +298,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                 </div>
 
                 {/* Prev / Next tap areas */}
-                {product.images.length > 1 && (
+                {displayImages.length > 1 && (
                   <>
                     <button
                       onClick={() => setSelectedImage((i) => Math.max(0, i - 1))}
@@ -301,7 +306,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                       aria-label="Previous image"
                     />
                     <button
-                      onClick={() => setSelectedImage((i) => Math.min(product.images.length - 1, i + 1))}
+                      onClick={() => setSelectedImage((i) => Math.min(displayImages.length - 1, i + 1))}
                       className="absolute right-0 top-0 bottom-0 w-1/4"
                       aria-label="Next image"
                     />
@@ -309,9 +314,9 @@ export default function ProductDetailClient({ product, related }: Props) {
                 )}
 
                 {/* Dot indicators */}
-                {product.images.length > 1 && (
+                {displayImages.length > 1 && (
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-                    {product.images.map((_, i) => (
+                    {displayImages.map((_, i) => (
                       <button
                         key={i}
                         aria-label={`View image ${i + 1}`}
@@ -326,14 +331,14 @@ export default function ProductDetailClient({ product, related }: Props) {
 
                 {/* Counter */}
                 <div className="absolute top-4 right-4 bg-charcoal/50 text-ivory text-xs font-inter px-2 py-0.5 rounded-full">
-                  {selectedImage + 1}/{product.images.length}
+                  {selectedImage + 1}/{displayImages.length}
                 </div>
               </div>
 
               {/* Thumbnail strip below on mobile */}
-              {product.images.length > 1 && (
+              {displayImages.length > 1 && (
                 <div className="flex gap-2 mt-3 overflow-x-auto hide-scrollbar pb-1">
-                  {product.images.map((img, i) => (
+                  {displayImages.map((img, i) => (
                     <button
                       key={i}
                       onClick={() => setSelectedImage(i)}
@@ -451,7 +456,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                         return (
                           <button
                             key={color}
-                            onClick={() => !oos && setSelectedColor(color)}
+                            onClick={() => { if (!oos) { setSelectedColor(color); setSelectedImage(0); } }}
                             disabled={oos}
                             className={`relative px-4 py-2 text-sm font-inter border transition-all duration-200 ${
                               oos
@@ -715,7 +720,7 @@ export default function ProductDetailClient({ product, related }: Props) {
 
       {/* ── Lightbox ───────────────────────────────────────────────────────── */}
       <AnimatePresence>
-        {lightboxOpen && product.images[selectedImage] && (
+        {lightboxOpen && displayImages[selectedImage] && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -734,7 +739,7 @@ export default function ProductDetailClient({ product, related }: Props) {
             </button>
 
             {/* Prev / Next in lightbox */}
-            {product.images.length > 1 && (
+            {displayImages.length > 1 && (
               <>
                 <button
                   className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white border border-white/20 hover:border-white/60 transition-colors"
@@ -746,8 +751,8 @@ export default function ProductDetailClient({ product, related }: Props) {
                 </button>
                 <button
                   className="absolute right-16 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white border border-white/20 hover:border-white/60 transition-colors"
-                  onClick={(e) => { e.stopPropagation(); setSelectedImage((i) => Math.min(product.images.length - 1, i + 1)); }}
-                  disabled={selectedImage === product.images.length - 1}
+                  onClick={(e) => { e.stopPropagation(); setSelectedImage((i) => Math.min(displayImages.length - 1, i + 1)); }}
+                  disabled={selectedImage === displayImages.length - 1}
                   aria-label="Next"
                 >
                   <ChevronRight size={20} />
@@ -766,7 +771,7 @@ export default function ProductDetailClient({ product, related }: Props) {
               style={{ aspectRatio: "3/4" }}
             >
               <Image
-                src={product.images[selectedImage]}
+                src={displayImages[selectedImage]}
                 alt={product.name}
                 fill
                 className="object-contain"
@@ -775,9 +780,9 @@ export default function ProductDetailClient({ product, related }: Props) {
             </motion.div>
 
             {/* Counter */}
-            {product.images.length > 1 && (
+            {displayImages.length > 1 && (
               <p className="absolute bottom-4 left-1/2 -translate-x-1/2 font-inter text-xs text-white/50">
-                {selectedImage + 1} / {product.images.length}
+                {selectedImage + 1} / {displayImages.length}
               </p>
             )}
           </motion.div>

@@ -22,7 +22,7 @@ const EMPTY_FORM = {
   fabric: "", featured: false, isNewArrival: false, isOnSale: false,
 };
 
-type ImageEntry = { url: string; alt: string };
+type ImageEntry = { url: string; alt: string; colorTag?: string };
 
 // Build variant map key
 const vkey = (size: string, color: string) => `${size}||${color}`;
@@ -82,7 +82,12 @@ export default function AdminProductsClient({ products: initial, categories, low
       sizes: p.sizes.join(","), colors: p.colors.join(","),
       fabric: p.fabric || "", featured: p.featured, isNewArrival: p.isNewArrival, isOnSale: p.isOnSale ?? false,
     });
-    setImages(p.images.map((url, i) => ({ url, alt: p.imageAlts?.[i] ?? "" })));
+    const colorImgs = (p.colorImages ?? {}) as Record<string, string[]>;
+    const urlToColor: Record<string, string> = {};
+    for (const [color, urls] of Object.entries(colorImgs)) {
+      for (const url of urls) urlToColor[url] = color;
+    }
+    setImages(p.images.map((url, i) => ({ url, alt: p.imageAlts?.[i] ?? "", colorTag: urlToColor[url] ?? "" })));
 
     const stock: Record<string, number> = {};
     const sku: Record<string, string> = {};
@@ -123,6 +128,10 @@ export default function AdminProductsClient({ products: initial, categories, low
     setImages((prev) => prev.map((img, idx) => idx === i ? { ...img, alt } : img));
   };
 
+  const updateImageColor = (i: number, colorTag: string) => {
+    setImages((prev) => prev.map((img, idx) => idx === i ? { ...img, colorTag } : img));
+  };
+
   const handleSave = async () => {
     if (!form.name || !form.price || !form.categoryId) { toast.error("Fill required fields"); return; }
     setSaving(true);
@@ -151,6 +160,16 @@ export default function AdminProductsClient({ products: initial, categories, low
         isOnSale: form.isOnSale,
         images: images.map((i) => i.url),
         imageAlts: images.map((i) => i.alt),
+        colorImages: (() => {
+          const map: Record<string, string[]> = {};
+          for (const img of images) {
+            if (img.colorTag && parsedColors.includes(img.colorTag)) {
+              if (!map[img.colorTag]) map[img.colorTag] = [];
+              map[img.colorTag].push(img.url);
+            }
+          }
+          return Object.keys(map).length > 0 ? map : null;
+        })(),
       };
 
       const url = editingProduct ? `/api/products/${editingProduct.id}` : "/api/products";
@@ -502,6 +521,18 @@ export default function AdminProductsClient({ products: initial, categories, low
                             placeholder="Alt text (for SEO & accessibility)"
                             className="w-full border border-ivory-200 px-2 py-1.5 text-xs font-inter focus:outline-none focus:border-rose-gold"
                           />
+                          {parsedColors.length > 0 && (
+                            <select
+                              value={img.colorTag ?? ""}
+                              onChange={(e) => updateImageColor(i, e.target.value)}
+                              className="w-full mt-1.5 border border-ivory-200 px-2 py-1.5 text-xs font-inter focus:outline-none focus:border-rose-gold bg-white text-charcoal"
+                            >
+                              <option value="">All colors</option>
+                              {parsedColors.map((c) => (
+                                <option key={c} value={c}>{c}</option>
+                              ))}
+                            </select>
+                          )}
                         </div>
                         {/* Order + remove buttons */}
                         <div className="flex flex-col gap-1 flex-shrink-0">

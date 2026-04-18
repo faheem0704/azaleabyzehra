@@ -86,6 +86,7 @@ model Product {
   compareAtPrice Float?
   images         String[]
   imageAlts      String[]
+  colorImages    Json?
   categoryId     String
   sizes          String[]
   colors         String[]

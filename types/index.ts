@@ -46,6 +46,7 @@ export interface Product {
   compareAtPrice: number | null;
   images: string[];
   imageAlts: string[];
+  colorImages?: Record<string, string[]>;
   categoryId: string;
   category?: Category;
   sizes: string[];
