@@ -98,7 +98,7 @@ export default function FilterSidebar({ filters, onFilterChange, onReset, mobile
     (filters.fabric ? 1 : 0) +
     (filters.minPrice || filters.maxPrice ? 1 : 0);
 
-  const SidebarContent = () => (
+  const sidebarContent = (
     <div className="space-y-0">
       {/* Sort */}
       <AccordionSection title="Sort By">
@@ -109,7 +109,7 @@ export default function FilterSidebar({ filters, onFilterChange, onReset, mobile
             { value: "price_desc", label: "Price: High to Low" },
             { value: "popular", label: "Most Popular" },
           ].map((opt) => (
-            <label key={opt.value} className="flex items-center gap-3 cursor-pointer group">
+            <label key={opt.value} onClick={() => onFilterChange({ sort: opt.value })} className="flex items-center gap-3 cursor-pointer group">
               <div
                 className={cn(
                   "w-4 h-4 border transition-all duration-200",
@@ -256,7 +256,7 @@ export default function FilterSidebar({ filters, onFilterChange, onReset, mobile
               </span>
             )}
           </div>
-          <SidebarContent />
+          {sidebarContent}
         </div>
       </aside>
 
@@ -285,7 +285,7 @@ export default function FilterSidebar({ filters, onFilterChange, onReset, mobile
                 </button>
               </div>
               <div className="p-6">
-                <SidebarContent />
+                {sidebarContent}
                 <button
                   onClick={() => onMobileOpenChange(false)}
                   className="mt-6 w-full btn-primary"
