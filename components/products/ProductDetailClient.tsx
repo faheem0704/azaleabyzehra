@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ShoppingBag, Share2, Star, ChevronRight, ChevronLeft, X, ZoomIn } from "lucide-react";
+import { Heart, ShoppingBag, Share2, Star, ChevronRight, ChevronLeft, X } from "lucide-react";
 import { Product, ProductVariant } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { useCartStore } from "@/store/cartStore";
@@ -64,15 +64,26 @@ export default function ProductDetailClient({ product, related }: Props) {
   };
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"description" | "fabric" | "care" | "reviews">("description");
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
 
-  // Touch swipe for mobile gallery
+  // Touch swipe for mobile gallery — live drag + snap
   const touchStartX = useRef(0);
-  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.targetTouches[0].clientX; };
+  const didSwipeRef = useRef(false);
+  const [swipeDelta, setSwipeDelta] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+    didSwipeRef.current = false;
+    setIsSwiping(true);
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setSwipeDelta(e.targetTouches[0].clientX - touchStartX.current);
+  };
   const handleTouchEnd = (e: React.TouchEvent) => {
     const diff = touchStartX.current - e.changedTouches[0].clientX;
+    setSwipeDelta(0);
+    setIsSwiping(false);
     if (Math.abs(diff) < 40) return; // ignore taps
+    didSwipeRef.current = true;
     if (diff > 0) setSelectedImage((i) => Math.min(displayImages.length - 1, i + 1));
     else setSelectedImage((i) => Math.max(0, i - 1));
   };
@@ -161,14 +172,6 @@ export default function ProductDetailClient({ product, related }: Props) {
     toast.success("Added to cart!");
   };
 
-  const handleZoom = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setZoomPos({
-      x: ((e.clientX - rect.left) / rect.width) * 100,
-      y: ((e.clientY - rect.top) / rect.height) * 100,
-    });
-  };
-
   return (
     <div className="pt-28 pb-24">
       {/* Breadcrumb */}
@@ -207,17 +210,14 @@ export default function ProductDetailClient({ product, related }: Props) {
                         i === selectedImage ? "border-rose-gold" : "border-transparent hover:border-ivory-200"
                       }`}
                     >
-                      <Image src={img} alt={`${product.name} view ${i + 1}`} fill className="object-cover" sizes="80px" />
+                      <Image src={img} alt={`${product.name} view ${i + 1}`} fill loading="eager" className="object-cover" sizes="80px" />
                     </button>
                   ))}
                 </div>
               )}
 
               {/* Main image */}
-              <div className="flex-1 relative aspect-[3/4] overflow-hidden bg-ivory-200 cursor-zoom-in group"
-                onMouseMove={handleZoom}
-                onMouseEnter={() => setIsZoomed(true)}
-                onMouseLeave={() => setIsZoomed(false)}
+              <div className="flex-1 relative aspect-[3/4] overflow-hidden bg-ivory-200 cursor-pointer group"
                 onClick={() => setLightboxOpen(true)}
               >
                 <AnimatePresence mode="wait" initial={false}>
@@ -229,17 +229,13 @@ export default function ProductDetailClient({ product, related }: Props) {
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.2 }}
                       className="absolute inset-0"
-                      style={{
-                        transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
-                        transform: isZoomed ? "scale(1.5)" : "scale(1)",
-                        transition: "transform 0.3s ease",
-                      }}
                     >
                       <Image
                         src={displayImages[selectedImage]}
                         alt={product.name}
                         fill
                         priority
+                        loading="eager"
                         sizes="(max-width: 1024px) 100vw, 50vw"
                         className="object-cover"
                       />
@@ -260,7 +256,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                   <>
                     <button
                       aria-label="Previous image"
-                      onClick={() => setSelectedImage((i) => Math.max(0, i - 1))}
+                      onClick={(e) => { e.stopPropagation(); setSelectedImage((i) => Math.max(0, i - 1)); }}
                       disabled={selectedImage === 0}
                       className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 disabled:opacity-0 hover:bg-white"
                     >
@@ -268,7 +264,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                     </button>
                     <button
                       aria-label="Next image"
-                      onClick={() => setSelectedImage((i) => Math.min(displayImages.length - 1, i + 1))}
+                      onClick={(e) => { e.stopPropagation(); setSelectedImage((i) => Math.min(displayImages.length - 1, i + 1)); }}
                       disabled={selectedImage === displayImages.length - 1}
                       className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 disabled:opacity-0 hover:bg-white"
                     >
@@ -290,32 +286,39 @@ export default function ProductDetailClient({ product, related }: Props) {
             <div className="lg:hidden">
               <div
                 className="relative aspect-[3/4] overflow-hidden bg-ivory-200"
+                style={{ touchAction: isSwiping ? "none" : "pan-y" }}
                 onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
               >
-                <AnimatePresence mode="wait" initial={false}>
-                  {displayImages[selectedImage] ? (
-                    <motion.div
-                      key={selectedImage}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.22 }}
-                      className="absolute inset-0"
+                {/* Sliding strip: all images side-by-side, shifted by selectedImage index + live swipeDelta */}
+                <div
+                  className="absolute inset-0 flex"
+                  style={{
+                    width: `${displayImages.length * 100}%`,
+                    transform: `translateX(calc(${-selectedImage * (100 / displayImages.length)}% + ${swipeDelta}px))`,
+                    transition: isSwiping ? "none" : "transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+                    willChange: "transform",
+                  }}
+                >
+                  {displayImages.map((img, i) => (
+                    <div
+                      key={i}
+                      className="relative flex-shrink-0"
+                      style={{ width: `${100 / displayImages.length}%` }}
                     >
                       <Image
-                        src={displayImages[selectedImage]}
-                        alt={product.name}
+                        src={img}
+                        alt={`${product.name} view ${i + 1}`}
                         fill
-                        priority
+                        priority={i === 0}
+                        loading="eager"
                         sizes="100vw"
                         className="object-cover"
                       />
-                    </motion.div>
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-ivory to-ivory-200" />
-                  )}
-                </AnimatePresence>
+                    </div>
+                  ))}
+                </div>
 
                 {/* Badges */}
                 <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -327,12 +330,12 @@ export default function ProductDetailClient({ product, related }: Props) {
                 {displayImages.length > 1 && (
                   <>
                     <button
-                      onClick={() => setSelectedImage((i) => Math.max(0, i - 1))}
+                      onClick={() => { if (didSwipeRef.current) return; setSelectedImage((i) => Math.max(0, i - 1)); }}
                       className="absolute left-0 top-0 bottom-0 w-1/4"
                       aria-label="Previous image"
                     />
                     <button
-                      onClick={() => setSelectedImage((i) => Math.min(displayImages.length - 1, i + 1))}
+                      onClick={() => { if (didSwipeRef.current) return; setSelectedImage((i) => Math.min(displayImages.length - 1, i + 1)); }}
                       className="absolute right-0 top-0 bottom-0 w-1/4"
                       aria-label="Next image"
                     />
@@ -372,7 +375,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                         i === selectedImage ? "border-rose-gold" : "border-transparent"
                       }`}
                     >
-                      <Image src={img} alt={`View ${i + 1}`} fill className="object-cover" sizes="64px" />
+                      <Image src={img} alt={`View ${i + 1}`} fill loading="eager" className="object-cover" sizes="64px" />
                     </button>
                   ))}
                 </div>
@@ -830,7 +833,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                   <ChevronLeft size={20} />
                 </button>
                 <button
-                  className="absolute right-16 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white border border-white/20 hover:border-white/60 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white border border-white/20 hover:border-white/60 transition-colors"
                   onClick={(e) => { e.stopPropagation(); setSelectedImage((i) => Math.min(displayImages.length - 1, i + 1)); }}
                   disabled={selectedImage === displayImages.length - 1}
                   aria-label="Next"
@@ -854,6 +857,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                 src={displayImages[selectedImage]}
                 alt={product.name}
                 fill
+                loading="eager"
                 className="object-contain"
                 sizes="(max-width: 768px) 100vw, 672px"
               />
