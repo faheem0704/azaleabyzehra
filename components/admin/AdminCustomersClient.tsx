@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -52,12 +53,12 @@ export default function AdminCustomersClient({ customers: initial }: { customers
             {customers.map((customer) => (
               <tr key={customer.id} className="hover:bg-ivory-200/30 transition-colors">
                 <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
+                  <Link href={`/admin/customers/${customer.id}`} className="flex items-center gap-3 group">
                     <div className="w-8 h-8 rounded-full bg-rose-gold/20 flex items-center justify-center font-inter text-xs text-rose-gold font-medium flex-shrink-0">
                       {customer.name?.[0] || customer.email?.[0] || "?"}
                     </div>
-                    <span className="font-inter text-sm text-charcoal">{customer.name || "—"}</span>
-                  </div>
+                    <span className="font-inter text-sm text-charcoal group-hover:text-rose-gold transition-colors">{customer.name || "—"}</span>
+                  </Link>
                 </td>
                 <td className="px-6 py-4">
                   <p className="font-inter text-sm text-charcoal">{customer.email || "—"}</p>
