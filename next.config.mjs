@@ -18,7 +18,7 @@ const nextConfig = {
 
   experimental: {
     // Tree-shake large component libraries — only bundle icons/components actually imported
-    optimizePackageImports: ["lucide-react", "framer-motion", "gsap"],
+    optimizePackageImports: ["lucide-react", "framer-motion", "gsap", "lenis"],
     // pg uses native Node modules (fs, net, tls, dns) — keep it server-only
     serverComponentsExternalPackages: [
       "pg",

@@ -6,6 +6,7 @@ import CartSync from "@/components/layout/CartSync";
 import SessionProvider from "@/components/providers/SessionProvider";
 import AnnouncementBanner from "./AnnouncementBanner";
 import SocialProofPopup from "@/components/products/SocialProofPopup";
+import SmoothScroll from "@/components/layout/SmoothScroll";
 
 async function getCategories() {
   return prisma.category.findMany({
@@ -29,6 +30,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
   return (
     <SessionProvider>
+      <SmoothScroll />
       <CartSync />
       <AnnouncementBanner />
       <Header categories={categories} salePageActive={salePageActive} />
