@@ -422,6 +422,43 @@ export default function ProductDetailClient({ product, related }: Props) {
                   )}
                 </div>
 
+                {/* Color Selector — mobile only (above fabric/size) */}
+                <div className="lg:hidden">
+                  {product.colors.length > 0 && (
+                    <div className="mb-6">
+                      <p className="font-inter text-xs tracking-widest uppercase text-charcoal-light mb-3">
+                        Color: <span className="text-charcoal normal-case tracking-normal font-medium">{selectedColor}</span>
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {product.colors.map((color) => {
+                          const oos = isColorOutOfStock(color);
+                          return (
+                            <button
+                              key={color}
+                              onClick={() => { if (!oos) { setSelectedColor(color); setSelectedImage(0); } }}
+                              disabled={oos}
+                              className={`relative px-4 py-2 text-sm font-inter border transition-all duration-200 ${
+                                oos
+                                  ? "border-ivory-200 text-ivory-200 cursor-not-allowed"
+                                  : selectedColor === color
+                                  ? "border-rose-gold text-rose-gold"
+                                  : "border-ivory-200 text-charcoal-light hover:border-rose-gold"
+                              }`}
+                            >
+                              {color}
+                              {oos && (
+                                <span className="absolute inset-0 flex items-center justify-center">
+                                  <span className="absolute w-full h-px bg-ivory-200 rotate-45" />
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Fabric */}
                 {product.fabric && (
                   <div className="mb-6 py-4 border-y border-ivory-200">
@@ -473,40 +510,42 @@ export default function ProductDetailClient({ product, related }: Props) {
                   </div>
                 )}
 
-                {/* Color Selector */}
-                {product.colors.length > 0 && (
-                  <div className="mb-6">
-                    <p className="font-inter text-xs tracking-widest uppercase text-charcoal-light mb-3">
-                      Color: <span className="text-charcoal normal-case tracking-normal font-medium">{selectedColor}</span>
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {product.colors.map((color) => {
-                        const oos = isColorOutOfStock(color);
-                        return (
-                          <button
-                            key={color}
-                            onClick={() => { if (!oos) { setSelectedColor(color); setSelectedImage(0); } }}
-                            disabled={oos}
-                            className={`relative px-4 py-2 text-sm font-inter border transition-all duration-200 ${
-                              oos
-                                ? "border-ivory-200 text-ivory-200 cursor-not-allowed"
-                                : selectedColor === color
-                                ? "border-rose-gold text-rose-gold"
-                                : "border-ivory-200 text-charcoal-light hover:border-rose-gold"
-                            }`}
-                          >
-                            {color}
-                            {oos && (
-                              <span className="absolute inset-0 flex items-center justify-center">
-                                <span className="absolute w-full h-px bg-ivory-200 rotate-45" />
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
+                {/* Color Selector — desktop only (original position, after size) */}
+                <div className="hidden lg:block">
+                  {product.colors.length > 0 && (
+                    <div className="mb-6">
+                      <p className="font-inter text-xs tracking-widest uppercase text-charcoal-light mb-3">
+                        Color: <span className="text-charcoal normal-case tracking-normal font-medium">{selectedColor}</span>
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {product.colors.map((color) => {
+                          const oos = isColorOutOfStock(color);
+                          return (
+                            <button
+                              key={color}
+                              onClick={() => { if (!oos) { setSelectedColor(color); setSelectedImage(0); } }}
+                              disabled={oos}
+                              className={`relative px-4 py-2 text-sm font-inter border transition-all duration-200 ${
+                                oos
+                                  ? "border-ivory-200 text-ivory-200 cursor-not-allowed"
+                                  : selectedColor === color
+                                  ? "border-rose-gold text-rose-gold"
+                                  : "border-ivory-200 text-charcoal-light hover:border-rose-gold"
+                              }`}
+                            >
+                              {color}
+                              {oos && (
+                                <span className="absolute inset-0 flex items-center justify-center">
+                                  <span className="absolute w-full h-px bg-ivory-200 rotate-45" />
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* Quantity */}
                 <div className="mb-8">
