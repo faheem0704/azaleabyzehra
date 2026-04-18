@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { sendOrderConfirmationEmail, sendNewOrderAlert } from "@/lib/resend";
@@ -118,9 +119,10 @@ export async function POST(req: NextRequest) {
     );
     const dbProducts = await prisma.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, price: true },
+      select: { id: true, price: true, slug: true },
     });
     const dbPriceMap = new Map(dbProducts.map((p) => [p.id, p.price]));
+    const dbSlugMap = new Map(dbProducts.map((p) => [p.id, p.slug]));
 
     // Build authorizedItems — same shape as client items but with DB prices
     const authorizedItems = (
@@ -173,11 +175,34 @@ export async function POST(req: NextRequest) {
     const finalTotal = Math.max(0, subtotal + shipping - validatedDiscount);
 
     // ── BUG-01 + BUG-06: stock availability check before creating anything ─
-    // Build a variant map here and reuse it for order creation + decrement —
-    // avoids fetching the same variants a second time later.
+    // Batch-fetch all variants and products in two queries, then do zero DB
+    // calls inside the loop (eliminates N+1 per cart item).
     const stockErrors: string[] = [];
     type VariantSnapshot = { id: string; stock: number; sku: string | null };
     const variantMap = new Map<string, VariantSnapshot>();
+
+    // Batch fetch all relevant variants in one query
+    const variantConditions = authorizedItems.map((item) => ({
+      productId: item.productId,
+      size: item.size,
+      color: item.color,
+    }));
+    const allVariants = await prisma.productVariant.findMany({
+      where: { OR: variantConditions },
+      select: { id: true, productId: true, size: true, color: true, stock: true, sku: true },
+    }).catch(() => [] as { id: string; productId: string; size: string; color: string; stock: number; sku: string | null }[]);
+
+    for (const v of allVariants) {
+      variantMap.set(`${v.productId}:${v.size}:${v.color}`, { id: v.id, stock: v.stock, sku: v.sku });
+    }
+
+    // Batch fetch all products by ID (for name lookup and no-variant stock check)
+    const allProductIds = Array.from(new Set(authorizedItems.map((i) => i.productId)));
+    const allProducts = await prisma.product.findMany({
+      where: { id: { in: allProductIds } },
+      select: { id: true, name: true, stock: true },
+    });
+    const allProductMap = new Map(allProducts.map((p) => [p.id, p]));
 
     // For products without variant records, accumulate total qty across all sizes/colors
     // before checking — prevents oversell when multiple line items share the same product
@@ -185,17 +210,11 @@ export async function POST(req: NextRequest) {
 
     for (const item of authorizedItems) {
       const key = `${item.productId}:${item.size}:${item.color}`;
-      const variant = await prisma.productVariant
-        .findUnique({
-          where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color } },
-          select: { id: true, stock: true, sku: true },
-        })
-        .catch(() => null);
+      const variant = variantMap.get(key) ?? null;
 
       if (variant) {
-        variantMap.set(key, variant);
         if (variant.stock < item.quantity) {
-          const prod = await prisma.product.findUnique({ where: { id: item.productId }, select: { name: true } });
+          const prod = allProductMap.get(item.productId);
           stockErrors.push(
             `"${prod?.name ?? item.productId}" (${item.size} / ${item.color}) — only ${variant.stock} left in stock`
           );
@@ -208,10 +227,7 @@ export async function POST(req: NextRequest) {
 
     // Check aggregate qty for products without variant records
     for (const [productId, totalQty] of Array.from(noVariantQtyMap)) {
-      const prod = await prisma.product.findUnique({
-        where: { id: productId },
-        select: { name: true, stock: true },
-      });
+      const prod = allProductMap.get(productId);
       if (prod && prod.stock < totalQty) {
         stockErrors.push(`"${prod.name}" — only ${prod.stock} left in stock`);
       }
@@ -287,6 +303,12 @@ export async function POST(req: NextRequest) {
 
     // Phase 2: sync product.stock for every affected product (sequential per product)
     const uniqueProductIds = Array.from(new Set(authorizedItems.map((i) => i.productId)));
+
+    // ── ISR revalidation — trigger fresh CDN page for each affected product ─
+    for (const productId of uniqueProductIds) {
+      const slug = dbSlugMap.get(productId);
+      if (slug) revalidatePath(`/products/${slug}`);
+    }
     for (const productId of uniqueProductIds) {
       const itemsForProduct = authorizedItems.filter((i) => i.productId === productId);
       const hasVariants = itemsForProduct.some((i) =>

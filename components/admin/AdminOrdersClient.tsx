@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, Truck, Printer, MessageCircle, RotateCcw } from "lucide-react";
 import { Order } from "@/types";
@@ -37,7 +38,15 @@ function buildWhatsAppUrl(phone: string, message: string) {
   return `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
 }
 
-export default function AdminOrdersClient({ orders: initialOrders }: { orders: Order[] }) {
+interface AdminOrdersClientProps {
+  orders: Order[];
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
+}
+
+export default function AdminOrdersClient({ orders: initialOrders, totalCount, currentPage, pageSize }: AdminOrdersClientProps) {
+  const router = useRouter();
   const [orders, setOrders] = useState(initialOrders);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -165,7 +174,7 @@ export default function AdminOrdersClient({ orders: initialOrders }: { orders: O
     <div>
       <div className="mb-8">
         <h1 className="font-playfair text-3xl text-charcoal">Orders</h1>
-        <p className="font-inter text-sm text-charcoal-light mt-1">{orders.length} total · {filtered.length} shown</p>
+        <p className="font-inter text-sm text-charcoal-light mt-1">{totalCount} total · {filtered.length} shown this page</p>
       </div>
 
       {/* Filters */}
@@ -470,6 +479,31 @@ export default function AdminOrdersClient({ orders: initialOrders }: { orders: O
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalCount > pageSize && (
+        <div className="flex items-center justify-between mt-8">
+          <p className="font-inter text-sm text-mauve">
+            Page {currentPage} of {Math.ceil(totalCount / pageSize)}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => router.push(`/admin/orders?page=${currentPage - 1}`)}
+              disabled={currentPage <= 1}
+              className="px-4 py-2 font-inter text-sm border border-ivory-200 text-charcoal hover:border-charcoal disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => router.push(`/admin/orders?page=${currentPage + 1}`)}
+              disabled={currentPage >= Math.ceil(totalCount / pageSize)}
+              className="px-4 py-2 font-inter text-sm border border-ivory-200 text-charcoal hover:border-charcoal disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

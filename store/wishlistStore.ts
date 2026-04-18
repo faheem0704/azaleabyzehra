@@ -31,7 +31,11 @@ export const useWishlistStore = create<WishlistStore>()(
     }),
     {
       name: "azalea-by-zehra-wishlist",
-      partialize: (state) => ({ items: state.items }),
+      // Only persist productId + addedAt — avoids stale product data and large localStorage footprint.
+      // CartSync re-hydrates product data from the server on sign-in.
+      partialize: (state) => ({
+        items: state.items.map((i) => ({ productId: i.productId, addedAt: i.addedAt })),
+      }),
     }
   )
 );

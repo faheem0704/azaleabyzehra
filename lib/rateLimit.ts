@@ -1,5 +1,5 @@
-// In-memory rate limiter — resets on server restart (fine for Next.js edge cases)
-// For production at scale, back with Redis.
+// In-memory rate limiter — resets on server restart (fine for single-instance dev/staging).
+// TODO: replace with Redis/Upstash KV for multi-instance production deploys.
 
 interface RateLimitEntry {
   count: number;
@@ -8,13 +8,17 @@ interface RateLimitEntry {
 
 const store = new Map<string, RateLimitEntry>();
 
-// Clean up stale entries every 5 minutes to prevent unbounded growth
-setInterval(() => {
+const MAX_STORE_SIZE = 10_000;
+
+function cleanupExpired(): void {
   const now = Date.now();
   store.forEach((entry, key) => {
     if (entry.resetAt < now) store.delete(key);
   });
-}, 5 * 60 * 1000);
+}
+
+// Periodic cleanup every 5 minutes as a backstop
+setInterval(cleanupExpired, 5 * 60 * 1000);
 
 /**
  * Check and increment rate limit.
@@ -22,6 +26,12 @@ setInterval(() => {
  */
 export function checkRateLimit(key: string, maxRequests: number, windowMs: number): boolean {
   const now = Date.now();
+
+  // Memory guard: prune expired entries if store is getting large
+  if (store.size >= MAX_STORE_SIZE) {
+    cleanupExpired();
+  }
+
   const entry = store.get(key);
 
   if (!entry || entry.resetAt < now) {

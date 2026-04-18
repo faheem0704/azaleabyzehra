@@ -2,13 +2,8 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import { gsap } from "gsap";
-import { SplitText } from "gsap/SplitText";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-
-gsap.registerPlugin(SplitText, ScrollTrigger);
 
 const VIDEOS = [
   {
@@ -43,19 +38,25 @@ export default function Hero() {
   const [activeIdx, setActiveIdx]       = useState(0);
   const [transitioning, setTransitioning] = useState(false);
 
-  // ── GSAP text animations (unchanged) ────────────────────────────────────
+  // ── GSAP text animations (lazy-loaded to keep GSAP out of main bundle) ──
   useEffect(() => {
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ delay: 0.3 });
-      tl.from(badgeRef.current, { opacity: 0, y: 20, duration: 0.6, ease: "power2.out" });
-      if (headlineRef.current) {
-        const split = new SplitText(headlineRef.current, { type: "chars,words" });
-        tl.from(split.chars, { opacity: 0, y: 60, rotateX: -90, stagger: 0.025, duration: 0.9, ease: "power4.out" }, "-=0.3");
-      }
-      tl.from(subtitleRef.current, { opacity: 0, y: 24, duration: 0.7, ease: "power2.out" }, "-=0.4");
-      tl.from(ctaRef.current,      { opacity: 0, y: 20, duration: 0.6, ease: "power2.out" }, "-=0.4");
+    let ctx: any;
+    import("gsap").then(({ gsap }) => {
+      import("gsap/SplitText").then(({ SplitText }) => {
+        gsap.registerPlugin(SplitText);
+        ctx = gsap.context(() => {
+          const tl = gsap.timeline({ delay: 0.3 });
+          tl.from(badgeRef.current, { opacity: 0, y: 20, duration: 0.6, ease: "power2.out" });
+          if (headlineRef.current) {
+            const split = new SplitText(headlineRef.current, { type: "chars,words" });
+            tl.from(split.chars, { opacity: 0, y: 60, rotateX: -90, stagger: 0.025, duration: 0.9, ease: "power4.out" }, "-=0.3");
+          }
+          tl.from(subtitleRef.current, { opacity: 0, y: 24, duration: 0.7, ease: "power2.out" }, "-=0.4");
+          tl.from(ctaRef.current,      { opacity: 0, y: 20, duration: 0.6, ease: "power2.out" }, "-=0.4");
+        });
+      });
     });
-    return () => ctx.revert();
+    return () => ctx?.revert();
   }, []);
 
   // ── Boot: play first video on mount ─────────────────────────────────────

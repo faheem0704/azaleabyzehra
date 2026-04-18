@@ -31,10 +31,11 @@ export default function ProductDetailClient({ product, related }: Props) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const variants: ProductVariant[] = (product as any).variants ?? [];
-  const colorImgs = (product.colorImages ?? {}) as Record<string, string[]>;
+  // product is a stable prop — parse colorImages once, not on every render
+  const colorImgs = useMemo(() => (product.colorImages ?? {}) as Record<string, string[]>, []); // eslint-disable-line react-hooks/exhaustive-deps
   const displayImages = useMemo(
     () => colorImgs[selectedColor]?.length > 0 ? colorImgs[selectedColor] : product.images,
-    [selectedColor, product.colorImages, product.images]
+    [selectedColor, colorImgs, product.images]
   );
 
   // Get stock for a specific size+color combination
@@ -312,7 +313,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                         alt={`${product.name} view ${i + 1}`}
                         fill
                         priority={i === 0}
-                        loading="eager"
+                        loading={i === 0 ? "eager" : "lazy"}
                         sizes="100vw"
                         className="object-cover"
                       />
@@ -375,7 +376,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                         i === selectedImage ? "border-rose-gold" : "border-transparent"
                       }`}
                     >
-                      <Image src={img} alt={`View ${i + 1}`} fill loading="eager" className="object-cover" sizes="64px" />
+                      <Image src={img} alt={`View ${i + 1}`} fill loading={i === 0 ? "eager" : "lazy"} className="object-cover" sizes="64px" />
                     </button>
                   ))}
                 </div>

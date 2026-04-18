@@ -15,10 +15,10 @@ async function getSettings() {
 
 export async function GET() {
   const settings = await getSettings();
-  return NextResponse.json({
-    shippingFee: settings.shippingFee,
-    freeShippingThreshold: settings.freeShippingThreshold,
-  });
+  return NextResponse.json(
+    { shippingFee: settings.shippingFee, freeShippingThreshold: settings.freeShippingThreshold },
+    { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } }
+  );
 }
 
 export async function PATCH(req: NextRequest) {

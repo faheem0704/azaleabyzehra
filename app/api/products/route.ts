@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
@@ -59,43 +57,71 @@ export async function GET(req: NextRequest) {
   const isOnSale = searchParams.get("isOnSale") === "true";
   if (isOnSale) where.isOnSale = true;
 
-  // BUG-14: popular sort now orders by actual order-item count descending
+  const isPopular = sort === "popular";
   const orderBy: Record<string, unknown> =
     sort === "price_asc"
       ? { price: "asc" }
       : sort === "price_desc"
       ? { price: "desc" }
-      : sort === "popular"
-      ? { orderItems: { _count: "desc" } }
       : { createdAt: "desc" };
 
-  const [total, products] = await Promise.all([
-    prisma.product.count({ where }),
-    prisma.product.findMany({
-      where,
-      // select only fields the listing page needs — avoids fetching description,
-      // full category object, review bodies, etc.
-      select: {
-        id: true, name: true, slug: true, description: true, price: true,
-        compareAtPrice: true, images: true, imageAlts: true, categoryId: true,
-        sizes: true, colors: true, fabric: true, stock: true,
-        featured: true, isNewArrival: true, createdAt: true,
-        category: { select: { id: true, name: true, slug: true, parentId: true } },
-        _count: { select: { reviews: true } },
-      },
-      orderBy,
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-  ]);
+  const productSelect = {
+    id: true, name: true, slug: true, price: true,
+    compareAtPrice: true, images: true, imageAlts: true, categoryId: true,
+    sizes: true, colors: true, fabric: true, stock: true,
+    featured: true, isNewArrival: true, createdAt: true,
+    category: { select: { id: true, name: true, slug: true, parentId: true } },
+    _count: { select: { reviews: true } },
+  };
 
-  return NextResponse.json({
-    data: products,
-    total,
-    page,
-    pageSize,
-    totalPages: Math.ceil(total / pageSize),
-  });
+  let total: number;
+  let products: any[];
+
+  if (isPopular) {
+    // Single LEFT JOIN + GROUP BY to rank by order count — avoids Prisma's
+    // per-product subquery approach. The @@index([productId]) on OrderItem
+    // makes this fast even with many order rows.
+    const popularIds = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT p.id
+      FROM products p
+      LEFT JOIN order_items oi ON oi.product_id = p.id
+      WHERE p.is_deleted = false
+      GROUP BY p.id
+      ORDER BY COUNT(oi.id) DESC
+      LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}
+    `.catch(() => [] as { id: string }[]);
+
+    const idList = popularIds.map((r) => r.id);
+    [total, products] = await Promise.all([
+      prisma.product.count({ where }),
+      prisma.product.findMany({
+        where: { ...where, id: { in: idList } },
+        select: productSelect,
+      }).then((rows) => {
+        // Re-sort to match the popularity order from the raw query
+        const order = new Map(idList.map((id, i) => [id, i]));
+        return rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+      }),
+    ]);
+  } else {
+    [total, products] = await Promise.all([
+      prisma.product.count({ where }),
+      prisma.product.findMany({
+        where,
+        // select only fields the listing page needs — avoids fetching description,
+        // full category object, review bodies, etc.
+        select: productSelect,
+        orderBy,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+  }
+
+  return NextResponse.json(
+    { data: products, total, page, pageSize, totalPages: Math.ceil(total / pageSize) },
+    { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" } }
+  );
 }
 
 export async function POST(req: NextRequest) {

@@ -14,6 +14,9 @@ interface Props {
   products: Product[];
   categories: Category[];
   lowStockThreshold: number;
+  totalCount: number;
+  currentPage: number;
+  pageSize: number;
 }
 
 const EMPTY_FORM = {
@@ -27,7 +30,7 @@ type ImageEntry = { url: string; alt: string; colorTag?: string };
 // Build variant map key
 const vkey = (size: string, color: string) => `${size}||${color}`;
 
-export default function AdminProductsClient({ products: initial, categories, lowStockThreshold }: Props) {
+export default function AdminProductsClient({ products: initial, categories, lowStockThreshold, totalCount, currentPage, pageSize }: Props) {
   const router = useRouter();
   const [products, setProducts] = useState(initial);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -348,6 +351,31 @@ export default function AdminProductsClient({ products: initial, categories, low
           )}
         </div>
       </div>
+
+      {/* Pagination */}
+      {totalCount > pageSize && (
+        <div className="flex items-center justify-between mt-6">
+          <p className="font-inter text-sm text-mauve">
+            Page {currentPage} of {Math.ceil(totalCount / pageSize)} · {totalCount} products
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => router.push(`/admin/products?page=${currentPage - 1}`)}
+              disabled={currentPage <= 1}
+              className="px-4 py-2 font-inter text-sm border border-ivory-200 text-charcoal hover:border-charcoal disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => router.push(`/admin/products?page=${currentPage + 1}`)}
+              disabled={currentPage >= Math.ceil(totalCount / pageSize)}
+              className="px-4 py-2 font-inter text-sm border border-ivory-200 text-charcoal hover:border-charcoal disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       <AnimatePresence>

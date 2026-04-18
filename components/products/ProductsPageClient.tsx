@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import ProductCard from "@/components/products/ProductCard";
 import FilterSidebar from "@/components/products/FilterSidebar";
 import ProductQuickView from "@/components/products/ProductQuickView";
@@ -18,13 +18,21 @@ const DEFAULT_FILTERS = {
   sort: "newest",
 };
 
-export default function ProductsPageClient() {
+interface ProductsPageClientProps {
+  initialProducts?: Product[] | null;
+  initialTotal?: number | null;
+  initialTotalPages?: number | null;
+}
+
+export default function ProductsPageClient({ initialProducts, initialTotal, initialTotalPages }: ProductsPageClientProps = {}) {
   const searchParams = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [total, setTotal] = useState(0);
+  const [products, setProducts] = useState<Product[]>(initialProducts ?? []);
+  const [total, setTotal] = useState(initialTotal ?? 0);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [totalPages, setTotalPages] = useState(initialTotalPages ?? 1);
+  // Skip first fetch if we have SSR data and no non-default search params
+  const hasInitialData = initialProducts != null && searchParams.toString() === "";
+  const [loading, setLoading] = useState(!hasInitialData);
   const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
@@ -59,10 +67,21 @@ export default function ProductsPageClient() {
     setLoading(false);
   }, [filters, searchParams]);
 
+  const isFirstRender = useRef(true);
+  const debounceRef = useRef<NodeJS.Timeout>();
   useEffect(() => {
-    fetchProducts(1, filters);
-    setPage(1);
-  }, [searchParams, filters]);
+    if (isFirstRender.current && hasInitialData) {
+      isFirstRender.current = false;
+      return;
+    }
+    isFirstRender.current = false;
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchProducts(1, filters);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [searchParams, filters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFilterChange = (changed: Partial<typeof filters>) => {
     setFilters((prev) => ({ ...prev, ...changed }));

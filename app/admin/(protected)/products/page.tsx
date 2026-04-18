@@ -3,8 +3,18 @@ export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import AdminProductsClient from "@/components/admin/AdminProductsClient";
 
-export default async function AdminProductsPage() {
-  const [products, categories, settings] = await Promise.all([
+const PAGE_SIZE = 20;
+
+interface Props {
+  searchParams: { page?: string };
+}
+
+export default async function AdminProductsPage({ searchParams }: Props) {
+  const currentPage = Math.max(1, parseInt(searchParams.page || "1"));
+  const skip = (currentPage - 1) * PAGE_SIZE;
+
+  const [totalCount, products, categories, settings] = await Promise.all([
+    prisma.product.count({ where: { isDeleted: false } }),
     prisma.product.findMany({
       where: { isDeleted: false },
       select: {
@@ -19,7 +29,8 @@ export default async function AdminProductsPage() {
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 100,
+      skip,
+      take: PAGE_SIZE,
     }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
     prisma.settings.findFirst({ select: { lowStockThreshold: true } }),
@@ -27,5 +38,5 @@ export default async function AdminProductsPage() {
 
   const lowStockThreshold = settings?.lowStockThreshold ?? 5;
 
-  return <AdminProductsClient products={products as any} categories={categories} lowStockThreshold={lowStockThreshold} />;
+  return <AdminProductsClient products={products as any} categories={categories} lowStockThreshold={lowStockThreshold} totalCount={totalCount} currentPage={currentPage} pageSize={PAGE_SIZE} />;
 }

@@ -45,8 +45,9 @@ export default function ProductCard({ product, onQuickView, priority = false }: 
   const [imageIndex, setImageIndex] = useState(0);
   const addItem = useCartStore((s) => s.addItem);
   const openCart = useCartStore((s) => s.openCart);
-  const { addItem: addToWishlist, removeItem: removeFromWishlist, hasItem } = useWishlistStore();
-  const isWishlisted = hasItem(product.id);
+  const isWishlisted = useWishlistStore((s) => s.items.some((i) => i.productId === product.id));
+  const addToWishlist = useWishlistStore((s) => s.addItem);
+  const removeFromWishlist = useWishlistStore((s) => s.removeItem);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -101,8 +102,7 @@ export default function ProductCard({ product, onQuickView, priority = false }: 
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => { setIsHovered(false); setImageIndex(0); }}

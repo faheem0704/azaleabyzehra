@@ -7,11 +7,20 @@ export default async function ReportsPage() {
   const now = new Date();
   const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
 
-  const [orders, orderItemGroups, statusBreakdown] = await Promise.all([
-    prisma.order.findMany({
-      where: { createdAt: { gte: twelveMonthsAgo }, status: { not: "CANCELLED" } },
-      select: { totalAmount: true, createdAt: true },
-    }),
+  // SQL aggregation: bucket revenue + order count by month in a single query
+  type MonthRow = { month: Date; revenue: number; order_count: bigint };
+  const [monthRows, orderItemGroups, statusBreakdown, summaryRow] = await Promise.all([
+    prisma.$queryRaw<MonthRow[]>`
+      SELECT
+        DATE_TRUNC('month', created_at) AS month,
+        SUM(total_amount)               AS revenue,
+        COUNT(*)                        AS order_count
+      FROM orders
+      WHERE created_at >= ${twelveMonthsAgo}
+        AND status != 'CANCELLED'
+      GROUP BY DATE_TRUNC('month', created_at)
+      ORDER BY month ASC
+    `,
     prisma.orderItem.groupBy({
       by: ["productId"],
       _sum: { price: true },
@@ -20,9 +29,15 @@ export default async function ReportsPage() {
       take: 5,
     }),
     prisma.order.groupBy({ by: ["status"], _count: { id: true } }),
+    prisma.$queryRaw<{ total_revenue: number; total_orders: bigint }[]>`
+      SELECT SUM(total_amount) AS total_revenue, COUNT(*) AS total_orders
+      FROM orders
+      WHERE created_at >= ${twelveMonthsAgo}
+        AND status != 'CANCELLED'
+    `,
   ]);
 
-  // Monthly buckets
+  // Build the 12-month chart array (fill gaps with 0)
   const monthMap = new Map<string, { revenue: number; orders: number; label: string }>();
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -30,19 +45,15 @@ export default async function ReportsPage() {
     const label = d.toLocaleString("en-IN", { month: "short", year: "2-digit" });
     monthMap.set(key, { revenue: 0, orders: 0, label });
   }
-  for (const o of orders) {
-    const d = new Date(o.createdAt);
+  for (const row of monthRows) {
+    const d = new Date(row.month);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     if (monthMap.has(key)) {
-      const b = monthMap.get(key)!;
-      b.revenue += o.totalAmount;
-      b.orders += 1;
+      monthMap.get(key)!.revenue = Math.round(Number(row.revenue));
+      monthMap.get(key)!.orders = Number(row.order_count);
     }
   }
-  const monthlyRevenue = Array.from(monthMap.values()).map((b) => ({
-    ...b,
-    revenue: Math.round(b.revenue),
-  }));
+  const monthlyRevenue = Array.from(monthMap.values());
 
   // Top products
   const productIds = orderItemGroups.map((p) => p.productId);
@@ -59,8 +70,8 @@ export default async function ReportsPage() {
     orderCount: p._count.id,
   }));
 
-  const totalRevenue = orders.reduce((s, o) => s + o.totalAmount, 0);
-  const totalOrders = orders.length;
+  const totalRevenue = Math.round(Number(summaryRow[0]?.total_revenue ?? 0));
+  const totalOrders = Number(summaryRow[0]?.total_orders ?? 0);
 
   return (
     <AdminReportsClient
