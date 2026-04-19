@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
       select: {
         id: true, name: true, slug: true, description: true, price: true,
         compareAtPrice: true, images: true, imageAlts: true, colorImages: true, categoryId: true,
-        sizes: true, colors: true, fabric: true, stock: true,
+        sizes: true, colors: true, colorFamilies: true, fabric: true, stock: true,
         featured: true, isNewArrival: true, isOnSale: true, createdAt: true,
         category: { select: { id: true, name: true } },
         variants: {
