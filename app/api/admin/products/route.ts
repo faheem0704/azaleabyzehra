@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
   const sort = searchParams.get("sort") || "newest";
 
   // Build dynamic where clause
-  const where: Parameters<typeof prisma.product.findMany>[0]["where"] = { isDeleted: false };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: Record<string, any> = { isDeleted: false };
 
   if (search) {
     where.OR = [
@@ -57,7 +58,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Build orderBy
-  const orderByMap: Record<string, Parameters<typeof prisma.product.findMany>[0]["orderBy"]> = {
+  const orderByMap: Record<string, Record<string, string>> = {
     newest:    { createdAt: "desc" },
     oldest:    { createdAt: "asc" },
     priceAsc:  { price: "asc" },
