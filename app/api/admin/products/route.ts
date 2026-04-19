@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { Prisma } from "@/generated/prisma";
-
 const PAGE_SIZE = 20;
 
 export async function GET(req: NextRequest) {
@@ -26,7 +24,7 @@ export async function GET(req: NextRequest) {
   const sort = searchParams.get("sort") || "newest";
 
   // Build dynamic where clause
-  const where: Prisma.ProductWhereInput = { isDeleted: false };
+  const where: Parameters<typeof prisma.product.findMany>[0]["where"] = { isDeleted: false };
 
   if (search) {
     where.OR = [
@@ -59,7 +57,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Build orderBy
-  const orderByMap: Record<string, Prisma.ProductOrderByWithRelationInput> = {
+  const orderByMap: Record<string, Parameters<typeof prisma.product.findMany>[0]["orderBy"]> = {
     newest:    { createdAt: "desc" },
     oldest:    { createdAt: "asc" },
     priceAsc:  { price: "asc" },
