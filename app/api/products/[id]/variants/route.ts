@@ -30,35 +30,23 @@ export async function PUT(
     variants: { size: string; color: string; stock: number; sku?: string }[];
   };
 
-  // Validate SKU uniqueness before touching the DB — each non-empty SKU must not
-  // already exist on a DIFFERENT variant (i.e. different productId or size/color).
-  const nonEmptySkus = variants.filter((v) => v.sku?.trim());
-  for (const v of nonEmptySkus) {
-    const normalizedSku = v.sku!.trim().toUpperCase();
-    v.sku = normalizedSku; // normalise to uppercase in-place
-    const conflict = await prisma.productVariant.findFirst({
-      where: {
-        sku: normalizedSku,
-        NOT: {
-          AND: [
-            { productId: params.id },
-            { size: v.size },
-            { color: v.color },
-          ],
-        },
-      },
-      select: { id: true, productId: true, size: true, color: true },
-    });
-    if (conflict) {
-      return NextResponse.json(
-        { error: `SKU "${normalizedSku}" is already assigned to another variant. SKUs must be globally unique.` },
-        { status: 409 }
-      );
+  // Fix 6: validate no negative stock values
+  const hasNegativeStock = variants.some((v) => v.stock < 0);
+  if (hasNegativeStock) {
+    return NextResponse.json(
+      { error: "Stock values cannot be negative." },
+      { status: 400 }
+    );
+  }
+
+  // Normalize SKUs in-place (Fix 10: removed sequential pre-check loop — rely on DB @@unique constraint)
+  for (const v of variants) {
+    if (v.sku?.trim()) {
+      v.sku = v.sku.trim().toUpperCase();
     }
   }
 
-  // BUG-19: was NOT { AND: [...] } which is always TRUE (deletes everything).
-  // Correct logic: delete variants whose (size, color) pair is NOT in the new list.
+  // Delete variants whose (size, color) pair is NOT in the new list.
   await prisma.productVariant.deleteMany({
     where: {
       productId: params.id,
@@ -81,8 +69,9 @@ export async function PUT(
     );
   } catch (err: any) {
     if (err?.code === "P2002") {
+      const target = err.meta?.target;
       return NextResponse.json(
-        { error: "One or more SKUs are already in use. SKUs must be globally unique." },
+        { error: `SKU conflict on field(s): ${Array.isArray(target) ? target.join(", ") : target}. SKUs must be globally unique.` },
         { status: 409 }
       );
     }

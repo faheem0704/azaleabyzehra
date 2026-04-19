@@ -19,9 +19,9 @@ export default async function AdminProductsPage({ searchParams }: Props) {
       where: { isDeleted: false },
       select: {
         id: true, name: true, slug: true, description: true, price: true,
-        compareAtPrice: true, images: true, imageAlts: true, categoryId: true,
+        compareAtPrice: true, images: true, imageAlts: true, colorImages: true, categoryId: true,
         sizes: true, colors: true, fabric: true, stock: true,
-        featured: true, isNewArrival: true, createdAt: true,
+        featured: true, isNewArrival: true, isOnSale: true, createdAt: true,
         category: { select: { id: true, name: true } },
         variants: {
           select: { id: true, size: true, color: true, stock: true, sku: true },

@@ -44,19 +44,28 @@ export default function AdminProductsClient({ products: initial, categories, low
   const [csvImporting, setCsvImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
+  // Fix 9: save lock ref to prevent double-save race
+  const saveLockRef = useRef<boolean>(false);
 
   const parsedSizes = form.sizes.split(",").map((s) => s.trim()).filter(Boolean);
   const parsedColors = form.colors.split(",").map((c) => c.trim()).filter(Boolean);
 
-  // Rebuild variant map when sizes/colors change — preserve existing stock values
-  const buildVariantMap = (sizes: string[], colors: string[]) => {
+  // Rebuild variant map when sizes/colors change — preserve existing stock values.
+  // Accepts current stock/sku maps as parameters so callers inside setForm functional
+  // updaters can pass the latest state rather than the stale render-time closure values.
+  const buildVariantMap = (
+    sizes: string[],
+    colors: string[],
+    currentStock: Record<string, number>,
+    currentSku: Record<string, string>,
+  ) => {
     const newStock: Record<string, number> = {};
     const newSku: Record<string, string> = {};
     for (const s of sizes) {
       for (const c of colors) {
         const k = vkey(s, c);
-        newStock[k] = variantStock[k] ?? (editingProduct ? 0 : 3);
-        newSku[k] = variantSku[k] ?? "";
+        newStock[k] = currentStock[k] ?? (editingProduct ? 0 : 3);
+        newSku[k] = currentSku[k] ?? "";
       }
     }
     setVariantStock(newStock);
@@ -107,16 +116,21 @@ export default function AdminProductsClient({ products: initial, categories, low
     if (!files) return;
     setUploading(true);
     const uploaded: ImageEntry[] = [];
-    for (const file of Array.from(files)) {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
-      if (data.url) uploaded.push({ url: data.url, alt: "" });
+    try {
+      for (const file of Array.from(files)) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch("/api/upload", { method: "POST", body: fd });
+        const data = await res.json();
+        if (data.url) uploaded.push({ url: data.url, alt: "" });
+      }
+      setImages((prev) => [...prev, ...uploaded]);
+      toast.success(`${uploaded.length} image(s) uploaded`);
+    } finally {
+      // Fix 4: always reset file input so the same file can be re-uploaded
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setUploading(false);
     }
-    setImages((prev) => [...prev, ...uploaded]);
-    setUploading(false);
-    toast.success(`${uploaded.length} image(s) uploaded`);
   };
 
   const moveImage = (i: number, dir: -1 | 1) => {
@@ -136,8 +150,21 @@ export default function AdminProductsClient({ products: initial, categories, low
   };
 
   const handleSave = async () => {
-    if (!form.name || !form.price || !form.categoryId) { toast.error("Fill required fields"); return; }
+    // Fix 11: name missing fields in validation toast
+    const missingFields: string[] = [];
+    if (!form.name) missingFields.push("Product Name");
+    if (!form.price) missingFields.push("Price");
+    if (!form.categoryId) missingFields.push("Category");
+    if (missingFields.length > 0) {
+      toast.error(`Required: ${missingFields.join(", ")}`);
+      return;
+    }
+
+    // Fix 9: synchronous lock check — prevents double-save race
+    if (saveLockRef.current) return;
+    saveLockRef.current = true;
     setSaving(true);
+
     try {
       const variants = parsedSizes.flatMap((size) =>
         parsedColors.map((color) => ({
@@ -182,23 +209,32 @@ export default function AdminProductsClient({ products: initial, categories, low
       if (!res.ok) throw new Error(saved.error);
 
       // Save variants
-      await fetch(`/api/products/${saved.id}/variants`, {
+      const variantRes = await fetch(`/api/products/${saved.id}/variants`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ variants }),
       });
+      // Parse body exactly once — Response.body is a single-use stream
+      const variantBody = await variantRes.json().catch(() => ({}));
+      if (!variantRes.ok) {
+        throw new Error((variantBody as { error?: string }).error || "Failed to save variant stock");
+      }
+
+      // Fix 7: use DB-returned variants (with IDs) for local state
+      const savedVariants: ProductVariant[] = Array.isArray(variantBody) ? variantBody : (variants as ProductVariant[]);
 
       if (editingProduct) {
-        setProducts((prev) => prev.map((p) => p.id === saved.id ? { ...p, ...saved, variants: variants as ProductVariant[] } : p));
+        setProducts((prev) => prev.map((p) => p.id === saved.id ? { ...p, ...saved, variants: savedVariants } : p));
         toast.success("Product updated");
       } else {
-        setProducts((prev) => [{ ...saved, variants: variants as ProductVariant[] }, ...prev]);
+        setProducts((prev) => [{ ...saved, variants: savedVariants }, ...prev]);
         toast.success("Product created");
       }
       setIsModalOpen(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save");
     } finally {
+      saveLockRef.current = false;
       setSaving(false);
     }
   };
@@ -381,7 +417,8 @@ export default function AdminProductsClient({ products: initial, categories, low
       <AnimatePresence>
         {isModalOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="fixed inset-0 z-[70] bg-charcoal/40 backdrop-blur-sm" />
+            {/* Fix 9: disable backdrop click while save is in-flight — use saveLockRef (synchronous) not saving state (async) */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { if (!saveLockRef.current) setIsModalOpen(false); }} className="fixed inset-0 z-[70] bg-charcoal/40 backdrop-blur-sm" />
             <motion.div
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
@@ -390,7 +427,7 @@ export default function AdminProductsClient({ products: initial, categories, low
             >
               <div className="flex items-center justify-between px-8 py-5 border-b border-ivory-200 sticky top-0 bg-ivory z-10">
                 <h2 className="font-playfair text-2xl text-charcoal">{editingProduct ? "Edit Product" : "New Product"}</h2>
-                <button onClick={() => setIsModalOpen(false)} className="text-charcoal-light hover:text-charcoal"><X size={20} /></button>
+                <button onClick={() => { if (!saveLockRef.current) setIsModalOpen(false); }} className="text-charcoal-light hover:text-charcoal disabled:opacity-30" disabled={saving}><X size={20} /></button>
               </div>
 
               <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -429,9 +466,16 @@ export default function AdminProductsClient({ products: initial, categories, low
                       value={form.sizes}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setForm(p => ({ ...p, sizes: val }));
-                        const sizes = val.split(",").map(s => s.trim()).filter(Boolean);
-                        buildVariantMap(sizes, parsedColors);
+                        // Capture current stock/sku before entering setForm so buildVariantMap
+                        // always receives the latest maps, not the stale render-time closure.
+                        const snapStock = variantStock;
+                        const snapSku = variantSku;
+                        setForm(p => {
+                          const freshColors = p.colors.split(",").map(c => c.trim()).filter(Boolean);
+                          const sizes = val.split(",").map(s => s.trim()).filter(Boolean);
+                          buildVariantMap(sizes, freshColors, snapStock, snapSku);
+                          return { ...p, sizes: val };
+                        });
                       }}
                       placeholder="S,M,L,XL,XXL"
                     />
@@ -440,9 +484,16 @@ export default function AdminProductsClient({ products: initial, categories, low
                       value={form.colors}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setForm(p => ({ ...p, colors: val }));
-                        const colors = val.split(",").map(c => c.trim()).filter(Boolean);
-                        buildVariantMap(parsedSizes, colors);
+                        // Capture current stock/sku before entering setForm so buildVariantMap
+                        // always receives the latest maps, not the stale render-time closure.
+                        const snapStock = variantStock;
+                        const snapSku = variantSku;
+                        setForm(p => {
+                          const freshSizes = p.sizes.split(",").map(s => s.trim()).filter(Boolean);
+                          const colors = val.split(",").map(c => c.trim()).filter(Boolean);
+                          buildVariantMap(freshSizes, colors, snapStock, snapSku);
+                          return { ...p, colors: val };
+                        });
                       }}
                       placeholder="Black,White,Navy"
                     />
@@ -477,7 +528,7 @@ export default function AdminProductsClient({ products: initial, categories, low
                                         type="number"
                                         min="0"
                                         value={variantStock[k] ?? 0}
-                                        onChange={(e) => setVariantStock(prev => ({ ...prev, [k]: parseInt(e.target.value) || 0 }))}
+                                        onChange={(e) => setVariantStock(prev => ({ ...prev, [k]: Math.max(0, parseInt(e.target.value) || 0) }))}
                                         className="w-full border border-ivory-200 px-2 py-1.5 text-center text-sm font-inter focus:outline-none focus:border-rose-gold"
                                       />
                                       <input
@@ -534,7 +585,7 @@ export default function AdminProductsClient({ products: initial, categories, low
 
                   <div className="space-y-3">
                     {images.map((img, i) => (
-                      <div key={i} className="flex gap-3 border border-ivory-200 p-3">
+                      <div key={img.url} className="flex gap-3 border border-ivory-200 p-3">
                         {/* Thumbnail */}
                         <div className="relative w-16 h-20 flex-shrink-0 bg-ivory-200 overflow-hidden">
                           <img src={img.url} alt={img.alt || ""} className="w-full h-full object-cover" />

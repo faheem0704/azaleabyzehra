@@ -119,17 +119,56 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
 
-  // BUG-08: generate a unique slug, appending a suffix on collision
-  let slug = slugify(body.name);
+  // Fix 8: destructure only allowed fields — never spread raw body
+  const {
+    name, description, price, compareAtPrice,
+    images, imageAlts, colorImages, categoryId,
+    sizes, colors, fabric, featured, isNewArrival, isOnSale, stock,
+    variants,
+  } = body;
+
+  // Generate a unique slug, appending a suffix on collision
+  let slug = slugify(name);
   const collision = await prisma.product.findUnique({ where: { slug } });
   if (collision) {
     slug = `${slug}-${Date.now()}`;
   }
 
   try {
-    const product = await prisma.product.create({
-      data: { ...body, slug },
+    // Fix 1: create product and variants atomically in a single transaction
+    const product = await prisma.$transaction(async (tx) => {
+      const created = await tx.product.create({
+        data: {
+          name, description, price, compareAtPrice,
+          images: images ?? [], imageAlts: imageAlts ?? [], colorImages,
+          categoryId, sizes: sizes ?? [], colors: colors ?? [],
+          fabric, featured: featured ?? false,
+          isNewArrival: isNewArrival ?? false,
+          isOnSale: isOnSale ?? false,
+          stock: stock ?? 0,
+          slug,
+        },
+      });
+
+      if (variants && Array.isArray(variants) && variants.length > 0) {
+        await tx.productVariant.createMany({
+          data: variants.map((v: { size: string; color: string; stock: number; sku?: string }) => ({
+            productId: created.id,
+            size: v.size,
+            color: v.color,
+            stock: v.stock,
+            sku: v.sku?.trim().toUpperCase() || null,
+          })),
+        });
+        // Sync product.stock to total of all variants
+        const total = variants.reduce((s: number, v: { stock: number }) => s + v.stock, 0);
+        const updated = await tx.product.update({ where: { id: created.id }, data: { stock: total } });
+        return updated;
+      }
+
+      return created;
     });
+
     return NextResponse.json(product, { status: 201 });
   } catch (err: unknown) {
     const e = err as { code?: string };
