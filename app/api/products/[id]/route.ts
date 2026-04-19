@@ -40,7 +40,7 @@ export async function PUT(
   const {
     name, description, price, compareAtPrice,
     images, imageAlts, colorImages, categoryId,
-    sizes, colors, fabric, featured, isNewArrival, isOnSale, stock,
+    sizes, colors, colorFamilies, fabric, featured, isNewArrival, isOnSale, stock,
     variants,
   } = body;
 
@@ -79,6 +79,7 @@ export async function PUT(
           ...(categoryId !== undefined && { categoryId }),
           ...(sizes !== undefined && { sizes }),
           ...(colors !== undefined && { colors }),
+          ...(colorFamilies !== undefined && { colorFamilies }),
           ...(fabric !== undefined && { fabric }),
           ...(featured !== undefined && { featured }),
           ...(isNewArrival !== undefined && { isNewArrival }),

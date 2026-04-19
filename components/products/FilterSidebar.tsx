@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { COLOR_FAMILIES } from "@/lib/colorFamilies";
 
 const DEFAULT_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
-const DEFAULT_COLORS = ["Black", "White", "Navy", "Maroon", "Green", "Pink", "Cream", "Blue", "Grey", "Orange"];
 const DEFAULT_FABRICS = ["Cotton", "Lawn", "Chiffon", "Silk", "Linen", "Georgette"];
 
 interface Filters {
@@ -59,16 +59,15 @@ function AccordionSection({ title, children }: { title: string; children: React.
 
 export default function FilterSidebar({ filters, onFilterChange, onReset, mobileOpen, onMobileOpenChange }: FilterSidebarProps) {
   const [availableSizes, setAvailableSizes] = useState(DEFAULT_SIZES);
-  const [availableColors, setAvailableColors] = useState(DEFAULT_COLORS);
+  const availableColors = COLOR_FAMILIES;
   const [availableFabrics, setAvailableFabrics] = useState(DEFAULT_FABRICS);
 
   useEffect(() => {
     fetch("/api/products/options")
       .then((r) => (r.ok ? r.json() : null))
-      .then((data: { sizes: string[]; colors: string[]; fabrics: string[] } | null) => {
+      .then((data: { sizes: string[]; fabrics: string[] } | null) => {
         if (!data) return;
         if (data.sizes.length > 0) setAvailableSizes(data.sizes);
-        if (data.colors.length > 0) setAvailableColors(data.colors);
         if (data.fabrics.length > 0) setAvailableFabrics(data.fabrics);
       })
       .catch(() => {});

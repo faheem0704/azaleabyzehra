@@ -90,6 +90,7 @@ model Product {
   categoryId     String
   sizes          String[]
   colors         String[]
+  colorFamilies  String[]  @default([])
   fabric         String?
   stock          Int      @default(0)
   featured       Boolean  @default(false)

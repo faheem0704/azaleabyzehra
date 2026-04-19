@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Edit2, Trash2, X, Upload, Star, Sparkles, Download, ChevronUp, ChevronDown, AlertTriangle, Search } from "lucide-react";
 import { Product, Category, ProductVariant } from "@/types";
 import { formatPrice } from "@/lib/utils";
+import { COLOR_FAMILIES } from "@/lib/colorFamilies";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import toast from "react-hot-toast";
@@ -63,6 +64,7 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [images, setImages] = useState<ImageEntry[]>([]);
+  const [colorFamilies, setColorFamilies] = useState<string[]>([]);
   const [variantStock, setVariantStock] = useState<Record<string, number>>({});
   const [variantSku, setVariantSku] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
@@ -197,6 +199,7 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
     setEditingProduct(null);
     setForm({ ...EMPTY_FORM });
     setImages([]);
+    setColorFamilies([]);
     const sizes = EMPTY_FORM.sizes.split(",").map(s => s.trim()).filter(Boolean);
     const colors = EMPTY_FORM.colors.split(",").map(c => c.trim()).filter(Boolean);
     const stock: Record<string, number> = {};
@@ -249,6 +252,7 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
         }
       }
     }
+    setColorFamilies(p.colorFamilies ?? []);
     setVariantStock(stock);
     setVariantSku(sku);
     setIsModalOpen(true);
@@ -325,6 +329,7 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
         categoryId: form.categoryId,
         sizes: parsedSizes,
         colors: parsedColors,
+        colorFamilies,
         fabric: form.fabric || null,
         stock: totalStock,
         featured: form.featured,
@@ -755,6 +760,28 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
                       placeholder="Black,White,Navy"
                     />
                   </div>
+                  <div>
+                    <label className="block text-xs font-inter tracking-widest uppercase text-charcoal-light mb-2">Color Families</label>
+                    <div className="flex flex-wrap gap-2">
+                      {COLOR_FAMILIES.map((family) => (
+                        <button
+                          key={family}
+                          type="button"
+                          onClick={() => setColorFamilies((prev) =>
+                            prev.includes(family) ? prev.filter((f) => f !== family) : [...prev, family]
+                          )}
+                          className={`px-3 py-1.5 text-xs font-inter border transition-all duration-200 ${
+                            colorFamilies.includes(family)
+                              ? "border-rose-gold bg-rose-gold text-white"
+                              : "border-ivory-200 text-charcoal-light hover:border-rose-gold hover:text-rose-gold"
+                          }`}
+                        >
+                          {family}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <Input label="Fabric" value={form.fabric} onChange={(e) => setForm(p => ({ ...p, fabric: e.target.value }))} placeholder="Lawn Cotton" />
 
                   {/* Variant Stock Grid */}

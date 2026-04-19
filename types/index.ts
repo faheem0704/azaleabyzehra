@@ -51,6 +51,7 @@ export interface Product {
   category?: Category;
   sizes: string[];
   colors: string[];
+  colorFamilies: string[];
   fabric: string | null;
   stock: number;
   featured: boolean;

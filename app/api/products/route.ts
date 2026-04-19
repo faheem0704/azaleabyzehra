@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     };
   }
 
-  if (colors?.length) where.colors = { hasSome: colors };
+  if (colors?.length) where.colorFamilies = { hasSome: colors };
   if (sizes?.length) where.sizes = { hasSome: sizes };
   if (fabrics?.length) where.fabric = { in: fabrics };
 
@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
   const {
     name, description, price, compareAtPrice,
     images, imageAlts, colorImages, categoryId,
-    sizes, colors, fabric, featured, isNewArrival, isOnSale, stock,
+    sizes, colors, colorFamilies, fabric, featured, isNewArrival, isOnSale, stock,
     variants,
   } = body;
 
@@ -142,6 +142,7 @@ export async function POST(req: NextRequest) {
           name, description, price, compareAtPrice,
           images: images ?? [], imageAlts: imageAlts ?? [], colorImages,
           categoryId, sizes: sizes ?? [], colors: colors ?? [],
+          colorFamilies: colorFamilies ?? [],
           fabric, featured: featured ?? false,
           isNewArrival: isNewArrival ?? false,
           isOnSale: isOnSale ?? false,
