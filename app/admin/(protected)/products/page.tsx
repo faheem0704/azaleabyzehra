@@ -5,15 +5,8 @@ import AdminProductsClient from "@/components/admin/AdminProductsClient";
 
 const PAGE_SIZE = 20;
 
-interface Props {
-  searchParams: { page?: string };
-}
-
-export default async function AdminProductsPage({ searchParams }: Props) {
-  const currentPage = Math.max(1, parseInt(searchParams.page || "1"));
-  const skip = (currentPage - 1) * PAGE_SIZE;
-
-  const [totalCount, products, categories, settings] = await Promise.all([
+export default async function AdminProductsPage() {
+  const [totalCount, initialProducts, categories, settings] = await Promise.all([
     prisma.product.count({ where: { isDeleted: false } }),
     prisma.product.findMany({
       where: { isDeleted: false },
@@ -29,7 +22,6 @@ export default async function AdminProductsPage({ searchParams }: Props) {
         },
       },
       orderBy: { createdAt: "desc" },
-      skip,
       take: PAGE_SIZE,
     }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
@@ -38,5 +30,5 @@ export default async function AdminProductsPage({ searchParams }: Props) {
 
   const lowStockThreshold = settings?.lowStockThreshold ?? 5;
 
-  return <AdminProductsClient products={products as any} categories={categories} lowStockThreshold={lowStockThreshold} totalCount={totalCount} currentPage={currentPage} pageSize={PAGE_SIZE} />;
+  return <AdminProductsClient initialProducts={initialProducts as any} categories={categories} lowStockThreshold={lowStockThreshold} totalCount={totalCount} />;
 }

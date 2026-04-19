@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Edit2, Trash2, X, Upload, Star, Sparkles, Download, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
+import { Plus, Edit2, Trash2, X, Upload, Star, Sparkles, Download, ChevronUp, ChevronDown, AlertTriangle, Search } from "lucide-react";
 import { Product, Category, ProductVariant } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import Button from "@/components/ui/Button";
@@ -11,12 +11,10 @@ import Input from "@/components/ui/Input";
 import toast from "react-hot-toast";
 
 interface Props {
-  products: Product[];
+  initialProducts: Product[];
   categories: Category[];
   lowStockThreshold: number;
   totalCount: number;
-  currentPage: number;
-  pageSize: number;
 }
 
 const EMPTY_FORM = {
@@ -30,9 +28,37 @@ type ImageEntry = { url: string; alt: string; colorTag?: string };
 // Build variant map key
 const vkey = (size: string, color: string) => `${size}||${color}`;
 
-export default function AdminProductsClient({ products: initial, categories, lowStockThreshold, totalCount, currentPage, pageSize }: Props) {
+const LIMIT = 20;
+
+export default function AdminProductsClient({ initialProducts, categories, lowStockThreshold, totalCount }: Props) {
   const router = useRouter();
-  const [products, setProducts] = useState(initial);
+  const [products, setProducts] = useState(initialProducts);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(initialProducts.length < totalCount);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [filteredTotal, setFilteredTotal] = useState(totalCount);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Filter state
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
+
+  // Refs for observer callback — readable synchronously without waiting for a re-render
+  const hasMoreRef = useRef(initialProducts.length < totalCount);
+  const loadingMoreRef = useRef(false);
+  const pageRef = useRef(1);
+  // Synchronous lock set before the async fetch begins — prevents the observer from
+  // calling fetchMore while a filter-reset fetch is already in flight (#2)
+  const isResettingRef = useRef(false);
+  // Separate loading state for filter-change fetches (#7)
+  const [isFiltering, setIsFiltering] = useState(false);
+
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
@@ -46,6 +72,101 @@ export default function AdminProductsClient({ products: initial, categories, low
   const csvInputRef = useRef<HTMLInputElement>(null);
   // Fix 9: save lock ref to prevent double-save race
   const saveLockRef = useRef<boolean>(false);
+
+  const buildQueryString = useCallback((nextPage: number, overrides?: {
+    search?: string; categoryId?: string; status?: string;
+    minPrice?: string; maxPrice?: string; sort?: string;
+  }) => {
+    const s = overrides?.search      ?? debouncedSearch;
+    const c = overrides?.categoryId  ?? categoryFilter;
+    const st = overrides?.status     ?? statusFilter;
+    const mn = overrides?.minPrice   ?? minPrice;
+    const mx = overrides?.maxPrice   ?? maxPrice;
+    const so = overrides?.sort       ?? sortBy;
+    const params = new URLSearchParams({ page: String(nextPage), limit: String(LIMIT) });
+    if (s)  params.set("search", s);
+    if (c)  params.set("categoryId", c);
+    if (st) params.set("status", st);
+    if (mn) params.set("minPrice", mn);
+    if (mx) params.set("maxPrice", mx);
+    if (so !== "newest") params.set("sort", so);
+    return params.toString();
+  }, [debouncedSearch, categoryFilter, statusFilter, minPrice, maxPrice, sortBy]);
+
+  const fetchMore = useCallback(async (nextPage: number) => {
+    // Guard via ref — synchronously readable, no re-render needed
+    if (loadingMoreRef.current || isResettingRef.current) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(`/api/admin/products?${buildQueryString(nextPage)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setProducts((prev) => [...prev, ...data.products]);
+      setFilteredTotal(data.totalCount);
+      hasMoreRef.current = data.hasMore;
+      setHasMore(data.hasMore);
+      pageRef.current = nextPage;
+      setPage(nextPage);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [buildQueryString]);
+
+  // Observer is created once and never reconnected — guards read refs synchronously (#8)
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMoreRef.current && !loadingMoreRef.current && !isResettingRef.current) {
+          fetchMore(pageRef.current + 1);
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  // fetchMore is stable (only rebuilds when buildQueryString changes, i.e. when filters change)
+  }, [fetchMore]);
+
+  // Debounce search input
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [search]);
+
+  // Reset list when any filter changes (including debounced search) (#3: uses buildQueryString)
+  useEffect(() => {
+    const resetAndFetch = async () => {
+      // Set the ref synchronously BEFORE any await — prevents the observer from calling
+      // fetchMore for page 2 while this fetch is still in flight (#2)
+      isResettingRef.current = true;
+      setIsFiltering(true);
+      try {
+        const res = await fetch(`/api/admin/products?${buildQueryString(1)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setProducts(data.products);
+        setFilteredTotal(data.totalCount);
+        hasMoreRef.current = data.hasMore;
+        setHasMore(data.hasMore);
+        pageRef.current = 1;
+        setPage(1);
+      } finally {
+        isResettingRef.current = false;
+        setIsFiltering(false);
+      }
+    };
+    resetAndFetch();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, categoryFilter, statusFilter, minPrice, maxPrice, sortBy]);
 
   const parsedSizes = form.sizes.split(",").map((s) => s.trim()).filter(Boolean);
   const parsedColors = form.colors.split(",").map((c) => c.trim()).filter(Boolean);
@@ -281,12 +402,26 @@ export default function AdminProductsClient({ products: initial, categories, low
     }
   };
 
+  const hasActiveFilters = search !== "" || categoryFilter !== "" || statusFilter !== "" || minPrice !== "" || maxPrice !== "" || sortBy !== "newest";
+
+  const clearFilters = () => {
+    setSearch("");
+    setDebouncedSearch("");
+    setCategoryFilter("");
+    setStatusFilter("");
+    setMinPrice("");
+    setMaxPrice("");
+    setSortBy("newest");
+  };
+
   // BUG-25: use settings lowStockThreshold instead of hardcoded 5
+  // Use strict < to match the API's `lt` operator — a product at exactly the threshold
+  // is NOT considered low stock (consistent with ?status=lowStock filter)
   const isLowStock = (p: Product) => {
     if (p.variants && p.variants.length > 0) {
-      return p.variants.some((v) => v.stock <= lowStockThreshold);
+      return p.variants.some((v) => v.stock > 0 && v.stock < lowStockThreshold);
     }
-    return p.stock <= lowStockThreshold && p.stock >= 0;
+    return p.stock > 0 && p.stock < lowStockThreshold;
   };
 
   return (
@@ -294,7 +429,7 @@ export default function AdminProductsClient({ products: initial, categories, low
       <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
         <div>
           <h1 className="font-playfair text-3xl text-charcoal">Products</h1>
-          <p className="font-inter text-sm text-charcoal-light mt-1">{totalCount} products</p>
+          <p className="font-inter text-sm text-charcoal-light mt-1">{filteredTotal} products</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {/* CSV */}
@@ -327,8 +462,112 @@ export default function AdminProductsClient({ products: initial, categories, low
         </div>
       </div>
 
+      {/* Search + Filter bar */}
+      <div className="bg-white rounded-xl shadow-sm border border-ivory-200 p-4 mb-6">
+        {/* Search input */}
+        <div className="relative mb-3">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mauve pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name or SKU…"
+            className="w-full border border-ivory-200 pl-9 pr-4 py-2.5 text-sm font-inter text-charcoal placeholder:text-mauve focus:outline-none focus:border-rose-gold rounded-lg"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-mauve hover:text-charcoal">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Filter strip */}
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Category */}
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="border border-ivory-200 rounded-lg px-3 py-2 text-sm font-inter text-charcoal focus:outline-none focus:border-rose-gold bg-white"
+          >
+            <option value="">All categories</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+
+          {/* Status */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="border border-ivory-200 rounded-lg px-3 py-2 text-sm font-inter text-charcoal focus:outline-none focus:border-rose-gold bg-white"
+          >
+            <option value="">All statuses</option>
+            <option value="featured">Featured</option>
+            <option value="newArrival">New Arrival</option>
+            <option value="onSale">On Sale</option>
+            <option value="lowStock">Low Stock</option>
+          </select>
+
+          {/* Price range */}
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              placeholder="Min ₹"
+              min={0}
+              className="w-20 border border-ivory-200 rounded-lg px-2.5 py-2 text-sm font-inter text-charcoal placeholder:text-mauve focus:outline-none focus:border-rose-gold"
+            />
+            <span className="text-mauve text-sm font-inter">–</span>
+            <input
+              type="number"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              placeholder="Max ₹"
+              min={0}
+              className="w-20 border border-ivory-200 rounded-lg px-2.5 py-2 text-sm font-inter text-charcoal placeholder:text-mauve focus:outline-none focus:border-rose-gold"
+            />
+          </div>
+
+          {/* Sort */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="border border-ivory-200 rounded-lg px-3 py-2 text-sm font-inter text-charcoal focus:outline-none focus:border-rose-gold bg-white"
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="priceAsc">Price ↑</option>
+            <option value="priceDesc">Price ↓</option>
+            <option value="nameAsc">Name A–Z</option>
+            <option value="nameDesc">Name Z–A</option>
+            <option value="stockAsc">Stock ↑</option>
+            <option value="stockDesc">Stock ↓</option>
+          </select>
+
+          {/* Clear filters */}
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-inter text-mauve hover:text-charcoal border border-ivory-200 rounded-lg transition-colors"
+            >
+              <X size={13} />
+              Clear filters
+            </button>
+          )}
+
+          {/* Result count */}
+          <span className="ml-auto font-inter text-xs text-mauve whitespace-nowrap">
+            Showing {products.length} of {filteredTotal} products
+          </span>
+        </div>
+      </div>
+
       {/* Table */}
-      <div className="bg-white border border-ivory-200 overflow-hidden">
+      <div className={`bg-white border border-ivory-200 overflow-hidden relative transition-opacity duration-150 ${isFiltering ? "opacity-60 pointer-events-none" : ""}`}>
+        {isFiltering && (
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-ivory-200 overflow-hidden z-10">
+            <div className="h-full bg-rose-gold animate-pulse" style={{ width: "60%" }} />
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="border-b border-ivory-200">
@@ -382,36 +621,23 @@ export default function AdminProductsClient({ products: initial, categories, low
           </table>
           {products.length === 0 && (
             <div className="text-center py-16">
-              <p className="font-inter text-sm text-mauve">No products yet. Add your first product!</p>
+              <p className="font-inter text-sm text-mauve">
+                {hasActiveFilters ? "No products match your filters." : "No products yet. Add your first product!"}
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Pagination */}
-      {totalCount > pageSize && (
-        <div className="flex items-center justify-between mt-6">
-          <p className="font-inter text-sm text-mauve">
-            Page {currentPage} of {Math.ceil(totalCount / pageSize)} · {totalCount} products
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => router.push(`/admin/products?page=${currentPage - 1}`)}
-              disabled={currentPage <= 1}
-              className="px-4 py-2 font-inter text-sm border border-ivory-200 text-charcoal hover:border-charcoal disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => router.push(`/admin/products?page=${currentPage + 1}`)}
-              disabled={currentPage >= Math.ceil(totalCount / pageSize)}
-              className="px-4 py-2 font-inter text-sm border border-ivory-200 text-charcoal hover:border-charcoal disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Infinite scroll sentinel */}
+      <div ref={sentinelRef} className="mt-6 flex justify-center min-h-[32px]">
+        {loadingMore && (
+          <div className="w-5 h-5 border-2 border-ivory-200 border-t-rose-gold rounded-full animate-spin" />
+        )}
+        {!hasMore && products.length > 0 && (
+          <p className="font-inter text-xs text-mauve">All {filteredTotal} products loaded</p>
+        )}
+      </div>
 
       {/* Modal */}
       <AnimatePresence>
