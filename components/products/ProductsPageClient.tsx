@@ -14,7 +14,7 @@ const DEFAULT_FILTERS = {
   maxPrice: "",
   colors: [] as string[],
   sizes: [] as string[],
-  fabric: "",
+  fabrics: [] as string[],
   sort: "newest",
 };
 
@@ -40,7 +40,7 @@ export default function ProductsPageClient({ initialProducts, initialTotal, init
   const activeFilterCount =
     (filters.colors.length > 0 ? 1 : 0) +
     (filters.sizes.length > 0 ? 1 : 0) +
-    (filters.fabric ? 1 : 0) +
+    (filters.fabrics.length > 0 ? 1 : 0) +
     (filters.minPrice || filters.maxPrice ? 1 : 0);
 
   const fetchProducts = useCallback(async (currentPage = 1, currentFilters = filters) => {
@@ -55,7 +55,7 @@ export default function ProductsPageClient({ initialProducts, initialTotal, init
       if (currentFilters.maxPrice) params.set("maxPrice", currentFilters.maxPrice);
       if (currentFilters.colors.length) params.set("colors", currentFilters.colors.join(","));
       if (currentFilters.sizes.length) params.set("sizes", currentFilters.sizes.join(","));
-      if (currentFilters.fabric) params.set("fabric", currentFilters.fabric);
+      if (currentFilters.fabrics.length) params.set("fabrics", currentFilters.fabrics.join(","));
       params.set("sort", currentFilters.sort);
       params.set("page", currentPage.toString());
       params.set("pageSize", "12");

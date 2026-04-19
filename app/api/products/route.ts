@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const maxPrice = searchParams.get("maxPrice");
   const colors = searchParams.get("colors")?.split(",").filter(Boolean);
   const sizes = searchParams.get("sizes")?.split(",").filter(Boolean);
-  const fabric = searchParams.get("fabric");
+  const fabrics = searchParams.get("fabrics")?.split(",").filter(Boolean);
   const sort = searchParams.get("sort") || "newest";
   const page = parseInt(searchParams.get("page") || "1");
   const pageSize = parseInt(searchParams.get("pageSize") || "12");
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
   if (colors?.length) where.colors = { hasSome: colors };
   if (sizes?.length) where.sizes = { hasSome: sizes };
-  if (fabric) where.fabric = { equals: fabric, mode: "insensitive" };
+  if (fabrics?.length) where.fabric = { in: fabrics };
 
   if (search) {
     where.OR = [

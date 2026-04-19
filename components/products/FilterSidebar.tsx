@@ -14,7 +14,7 @@ interface Filters {
   maxPrice: string;
   colors: string[];
   sizes: string[];
-  fabric: string;
+  fabrics: string[];
   sort: string;
 }
 
@@ -89,13 +89,16 @@ export default function FilterSidebar({ filters, onFilterChange, onReset, mobile
   };
 
   const toggleFabric = (fabric: string) => {
-    onFilterChange({ fabric: filters.fabric === fabric ? "" : fabric });
+    const fabrics = filters.fabrics.includes(fabric)
+      ? filters.fabrics.filter((f) => f !== fabric)
+      : [...filters.fabrics, fabric];
+    onFilterChange({ fabrics });
   };
 
   const activeCount =
     (filters.colors.length > 0 ? 1 : 0) +
     (filters.sizes.length > 0 ? 1 : 0) +
-    (filters.fabric ? 1 : 0) +
+    (filters.fabrics.length > 0 ? 1 : 0) +
     (filters.minPrice || filters.maxPrice ? 1 : 0);
 
   const sidebarContent = (
@@ -204,27 +207,20 @@ export default function FilterSidebar({ filters, onFilterChange, onReset, mobile
 
       {/* Fabric */}
       <AccordionSection title="Fabric">
-        <div className="space-y-2">
+        <div className="flex flex-wrap gap-2">
           {availableFabrics.map((fabric) => (
-            <label key={fabric} onClick={() => toggleFabric(fabric)} className="flex items-center gap-3 cursor-pointer group">
-              <div
-                className={cn(
-                  "w-4 h-4 border transition-all duration-200",
-                  filters.fabric === fabric
-                    ? "border-rose-gold bg-rose-gold"
-                    : "border-ivory-200 group-hover:border-rose-gold"
-                )}
-              >
-                {filters.fabric === fabric && (
-                  <svg viewBox="0 0 16 16" className="w-full h-full text-white" fill="currentColor">
-                    <path d="M6.5 11.5L3 8l1-1 2.5 2.5 6-6 1 1z" />
-                  </svg>
-                )}
-              </div>
-              <span className="font-inter text-sm text-charcoal-light group-hover:text-charcoal">
-                {fabric}
-              </span>
-            </label>
+            <button
+              key={fabric}
+              onClick={() => toggleFabric(fabric)}
+              className={cn(
+                "px-3 py-1.5 text-xs font-inter border transition-all duration-200",
+                filters.fabrics.includes(fabric)
+                  ? "border-rose-gold bg-rose-gold text-white"
+                  : "border-ivory-200 text-charcoal-light hover:border-rose-gold hover:text-rose-gold"
+              )}
+            >
+              {fabric}
+            </button>
           ))}
         </div>
       </AccordionSection>
