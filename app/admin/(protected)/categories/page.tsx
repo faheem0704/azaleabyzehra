@@ -14,23 +14,35 @@ export default function AdminCategoriesPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch("/api/categories").then((r) => r.json()).then(setCategories);
+    fetch("/api/categories")
+      .then((r) => r.json())
+      .then(setCategories)
+      .catch(() => toast.error("Failed to load categories"));
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
-    const res = await fetch("/api/categories", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, parentId: parentId || null }),
-    });
-    const cat = await res.json();
-    setCategories((prev) => [...prev, cat]);
-    setName(""); setParentId("");
-    setSaving(false);
-    toast.success("Category created");
+    try {
+      const res = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, parentId: parentId || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to create category");
+        return;
+      }
+      setCategories((prev) => [...prev, data]);
+      setName(""); setParentId("");
+      toast.success("Category created");
+    } catch {
+      toast.error("Failed to create category");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id: string) => {

@@ -137,11 +137,18 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Soft delete
-  await prisma.product.update({
-    where: { id: params.id },
-    data: { isDeleted: true },
-  });
+  try {
+    // Soft delete
+    await prisma.product.update({
+      where: { id: params.id },
+      data: { isDeleted: true },
+    });
+  } catch (err: any) {
+    if (err?.code === "P2025") {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+    throw err;
+  }
 
   return NextResponse.json({ message: "Product deleted" });
 }

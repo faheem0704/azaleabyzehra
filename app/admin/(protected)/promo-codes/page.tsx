@@ -83,19 +83,37 @@ export default function PromoCodesPage() {
   };
 
   const toggleActive = async (promo: PromoCode) => {
-    await fetch(`/api/admin/promo-codes/${promo.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: !promo.active }),
-    });
-    fetchPromos();
+    try {
+      const res = await fetch(`/api/admin/promo-codes/${promo.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !promo.active }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error((data as { error?: string }).error || "Failed to update promo code");
+        return;
+      }
+      fetchPromos();
+    } catch {
+      toast.error("Failed to update promo code");
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this promo code?")) return;
-    await fetch(`/api/admin/promo-codes/${id}`, { method: "DELETE" });
-    toast.success("Deleted");
-    fetchPromos();
+    try {
+      const res = await fetch(`/api/admin/promo-codes/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error((data as { error?: string }).error || "Failed to delete promo code");
+        return;
+      }
+      toast.success("Deleted");
+      fetchPromos();
+    } catch {
+      toast.error("Failed to delete promo code");
+    }
   };
 
   return (

@@ -174,7 +174,11 @@ export default function AdminOrdersClient({ orders: initialOrders, totalCount, c
     <div>
       <div className="mb-8">
         <h1 className="font-playfair text-3xl text-charcoal">Orders</h1>
-        <p className="font-inter text-sm text-charcoal-light mt-1">{totalCount} total · {filtered.length} shown this page</p>
+        <p className="font-inter text-sm text-charcoal-light mt-1">
+          {filtered.length < orders.length
+            ? `${filtered.length} of ${orders.length} orders (filtered) · ${totalCount} total`
+            : `${totalCount} total orders`}
+        </p>
       </div>
 
       {/* Filters */}

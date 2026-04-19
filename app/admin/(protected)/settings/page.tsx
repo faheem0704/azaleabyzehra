@@ -71,6 +71,11 @@ export default function AdminSettingsPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const threshold = Number(form.lowStockThreshold);
+    if (!Number.isInteger(threshold) || threshold < 1) {
+      toast.error("Low Stock Threshold must be a whole number of at least 1");
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch("/api/config/store", {
@@ -82,7 +87,7 @@ export default function AdminSettingsPage() {
           whatsappNumber: form.whatsappNumber,
           address: form.address,
           phone: form.phone,
-          lowStockThreshold: Number(form.lowStockThreshold),
+          lowStockThreshold: threshold,
           adminEmail: form.adminEmail,
         }),
       });

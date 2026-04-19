@@ -225,8 +225,29 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
     const stock: Record<string, number> = {};
     const sku: Record<string, string> = {};
     for (const s of p.sizes) for (const c of p.colors) { stock[vkey(s, c)] = 0; sku[vkey(s, c)] = ""; }
-    if (p.variants) {
+    // Only use variant data if variants exist AND their total stock is > 0.
+    // If all variants have stock=0 but product.stock > 0, the variant rows are stale/corrupt
+    // — fall through to the even-distribution fallback so the admin sees real inventory.
+    const variantTotalStock = p.variants?.reduce((s, v) => s + v.stock, 0) ?? 0;
+    if (p.variants && p.variants.length > 0 && variantTotalStock > 0) {
       for (const v of p.variants) { stock[vkey(v.size, v.color)] = v.stock; sku[vkey(v.size, v.color)] = v.sku ?? ""; }
+    } else if (p.stock > 0) {
+      // No variant rows exist yet, or all variants show 0 while product.stock > 0
+      // (e.g. product created via CSV before variant tracking, or stale variant data).
+      // Distribute total stock evenly across all size×color combinations so the admin
+      // sees the real inventory rather than zeros.
+      const cellCount = p.sizes.length * p.colors.length;
+      if (cellCount > 0) {
+        const perCell = Math.floor(p.stock / cellCount);
+        const remainder = p.stock % cellCount;
+        let i = 0;
+        for (const s of p.sizes) {
+          for (const c of p.colors) {
+            stock[vkey(s, c)] = perCell + (i === 0 ? remainder : 0);
+            i++;
+          }
+        }
+      }
     }
     setVariantStock(stock);
     setVariantSku(sku);
@@ -345,10 +366,20 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
       const savedVariants: ProductVariant[] = Array.isArray(variantBody) ? variantBody : (variants as ProductVariant[]);
 
       if (editingProduct) {
-        setProducts((prev) => prev.map((p) => p.id === saved.id ? { ...p, ...saved, variants: savedVariants } : p));
+        setProducts((prev) => prev.map((p) =>
+          p.id === saved.id
+            // Preserve the category object from existing local state — the PUT response does not
+            // include a category relation. Spreading `saved` last would overwrite `p.category` with
+            // undefined because the product update endpoint returns only the flat product row.
+            ? { ...p, ...saved, category: p.category, variants: savedVariants }
+            : p
+        ));
         toast.success("Product updated");
       } else {
-        setProducts((prev) => [{ ...saved, variants: savedVariants }, ...prev]);
+        // For new products the category relation is not in the server response either.
+        // Look it up from the categories prop so the table shows the correct category name.
+        const matchedCategory = categories.find((c) => c.id === saved.categoryId);
+        setProducts((prev) => [{ ...saved, category: matchedCategory ?? null, variants: savedVariants }, ...prev]);
         toast.success("Product created");
       }
       setIsModalOpen(false);

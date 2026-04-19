@@ -23,13 +23,17 @@ export default async function ReportsPage() {
       GROUP BY DATE_TRUNC('month', "createdAt")
       ORDER BY month ASC
     `,
-    prisma.orderItem.groupBy({
-      by: ["productId"],
-      _sum: { price: true },
-      _count: { id: true },
-      orderBy: { _sum: { price: "desc" } },
-      take: 5,
-    }),
+    // Sum price × quantity for true revenue per product (groupBy can't do computed expressions)
+    prisma.$queryRaw<{ productId: string; revenue: number; orderCount: bigint }[]>`
+      SELECT
+        "productId",
+        SUM(price * quantity)::float AS revenue,
+        COUNT(DISTINCT "orderId")   AS "orderCount"
+      FROM order_items
+      GROUP BY "productId"
+      ORDER BY revenue DESC
+      LIMIT 5
+    `,
     prisma.order.groupBy({ by: ["status"], _count: { id: true } }),
     prisma.$queryRaw<{ total_revenue: number; total_orders: bigint }[]>`
       SELECT SUM("totalAmount") AS total_revenue, COUNT(*) AS total_orders
@@ -68,8 +72,8 @@ export default async function ReportsPage() {
     productId: p.productId,
     name: productMap.get(p.productId)?.name ?? "Unknown",
     image: productMap.get(p.productId)?.images?.[0] ?? null,
-    revenue: Math.round(p._sum.price ?? 0),
-    orderCount: p._count.id,
+    revenue: Math.round(Number(p.revenue) ?? 0),
+    orderCount: Number(p.orderCount),
   }));
 
   const totalRevenue = Math.round(Number(summaryRow[0]?.total_revenue ?? 0));

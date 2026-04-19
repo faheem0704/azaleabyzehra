@@ -11,6 +11,11 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   const session = await auth();
+  // Require at least a valid session before hitting the DB
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const order = await prisma.order.findUnique({
     where: { id: params.id },
     include: {
@@ -23,10 +28,10 @@ export async function GET(
   if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
-  const isOwner = order.userId === session?.user?.id;
+  const isOwner = order.userId === session.user.id;
 
   if (!isAdmin && !isOwner) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   return NextResponse.json(order);

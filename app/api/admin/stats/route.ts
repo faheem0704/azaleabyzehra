@@ -10,6 +10,9 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const settings = await prisma.settings.findFirst({ select: { lowStockThreshold: true } });
+  const lowStockThreshold = settings?.lowStockThreshold ?? 5;
+
   const [
     totalRevenue,
     totalOrders,
@@ -35,7 +38,7 @@ export async function GET() {
       },
     }),
     prisma.product.findMany({
-      where: { stock: { lt: 5 }, isDeleted: false },
+      where: { stock: { lt: lowStockThreshold }, isDeleted: false },
       select: { id: true, name: true, stock: true, images: true },
       take: 10,
     }),
