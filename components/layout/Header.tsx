@@ -71,7 +71,7 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
 
   const staticShopLinks = [
     { label: "New Arrivals", href: "/new-arrivals" },
-    { label: "Featured", href: "/products?featured=true" },
+    { label: "Influencers Collection", href: "/products?featured=true" },
     { label: "Best Sellers", href: "/products?sort=popular" },
     ...(salePageActive ? [{ label: "Sale", href: "/sale", sale: true }] : []),
   ];
@@ -164,7 +164,7 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                         <div className="border-l border-ivory-200 pl-6">
                           <p className="section-subtitle text-xs mb-4">Quick Links</p>
                           <ul className="space-y-2">
-                            <li><Link href="/products?featured=true" className="font-inter text-sm text-charcoal hover:text-rose-gold transition-colors">Featured</Link></li>
+                            <li><Link href="/products?featured=true" className="font-inter text-sm text-charcoal hover:text-rose-gold transition-colors">Influencers Collection</Link></li>
                             <li><Link href="/new-arrivals" className="font-inter text-sm text-charcoal hover:text-rose-gold transition-colors">New Arrivals</Link></li>
                             <li><Link href="/products?sort=popular" className="font-inter text-sm text-charcoal hover:text-rose-gold transition-colors">Best Sellers</Link></li>
                           </ul>

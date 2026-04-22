@@ -31,7 +31,7 @@ export default function LookbookGrid({ products }: LookbookGridProps) {
           viewport={{ once: true }}
           className="section-subtitle mb-4"
         >
-          Lookbook
+          Influencers Collection
         </motion.p>
         <motion.h2
           initial={{ opacity: 0, y: 24 }}
