@@ -69,6 +69,13 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
     { label: "Help", href: "/help" },
   ];
 
+  const staticShopLinks = [
+    { label: "New Arrivals", href: "/new-arrivals" },
+    { label: "Featured", href: "/products?featured=true" },
+    { label: "Best Sellers", href: "/products?sort=popular" },
+    ...(salePageActive ? [{ label: "Sale", href: "/sale", sale: true }] : []),
+  ];
+
   return (
     <>
       <header
@@ -93,7 +100,7 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                   priority
                   className="object-contain"
                 />
-                <span className="font-playfair text-2xl text-charcoal tracking-wide">
+                <span className="hidden sm:inline font-playfair text-2xl text-charcoal tracking-wide">
                   Azalea <span className="text-rose-gold">by Zehra</span>
                 </span>
               </motion.div>
@@ -185,7 +192,7 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
             </nav>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2.5 lg:gap-4">
               {/* Search */}
               <motion.button
                 whileHover={{ scale: 1.1 }}
@@ -293,7 +300,7 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                             </>
                           )}
                           <button
-                            onClick={() => { signOut(); setIsAccountOpen(false); }}
+                            onClick={() => { signOut({ callbackUrl: "/" }); setIsAccountOpen(false); }}
                             className="flex items-center gap-2 w-full px-4 py-2 text-sm font-inter text-charcoal hover:text-rose-gold hover:bg-ivory-200 transition-colors"
                           >
                             <LogOut size={14} />
@@ -409,16 +416,12 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
               </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto px-6 py-8">
+            <nav className="flex-1 overflow-y-auto px-6 py-6">
+
+              {/* SHOP */}
+              <p className="section-subtitle text-xs mb-3">Shop</p>
               <motion.ul className="space-y-1">
-                {[
-                  { label: "All Products", href: "/products" },
-                  { label: "New Arrivals", href: "/new-arrivals" },
-                  ...(salePageActive ? [{ label: "Sale", href: "/sale", sale: true }] : []),
-                  { label: "Orders", href: "/orders" },
-                  { label: "Wishlist", href: "/wishlist" },
-                  { label: "Help", href: "/help" },
-                ].map((item, i) => (
+                {staticShopLinks.map((item, i) => (
                   <motion.li
                     key={item.href}
                     initial={{ opacity: 0, x: 24 }}
@@ -439,13 +442,12 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                     </Link>
                   </motion.li>
                 ))}
-                {/* Categories — parent with indented children */}
                 {categories.filter((c) => !c.parentId).map((cat, i) => (
                   <motion.li
                     key={cat.id}
                     initial={{ opacity: 0, x: 24 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: (6 + i) * 0.05 }}
+                    transition={{ delay: (staticShopLinks.length + i) * 0.05 }}
                   >
                     <Link
                       href={`/products?category=${cat.slug}`}
@@ -473,55 +475,83 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                 ))}
               </motion.ul>
 
-              <div className="mt-8 pt-8 border-t border-ivory-200">
+              {/* ACCOUNT */}
+              <div className="mt-8 pt-6 border-t border-ivory-200">
+                <p className="section-subtitle text-xs mb-3">Account</p>
                 {session ? (
-                  <>
-                    <p className="text-xs font-inter text-mauve mb-1">
+                  <div className="space-y-1">
+                    <p className="text-xs font-inter text-mauve mb-3 truncate">
                       {session.user?.name || session.user?.email}
                     </p>
-                    {isAdmin && (
-                      <span className="inline-block text-[10px] font-inter tracking-widest uppercase text-rose-gold mb-4">Admin</span>
-                    )}
                     {isAdmin ? (
                       <Link
                         href="/admin"
                         onClick={closeMobileMenu}
-                        className="flex items-center gap-2 text-sm font-inter text-charcoal hover:text-rose-gold mb-3"
+                        className="flex items-center gap-3 py-3 font-inter text-lg text-charcoal hover:text-rose-gold transition-colors border-b border-ivory-200"
                       >
-                        <LayoutDashboard size={16} />
+                        <LayoutDashboard size={18} />
                         Admin Panel
                       </Link>
                     ) : (
                       <>
-                        <Link href="/orders" onClick={closeMobileMenu} className="flex items-center gap-2 text-sm font-inter text-charcoal hover:text-rose-gold mb-3">
-                          <Package size={16} />
+                        <Link
+                          href="/orders"
+                          onClick={closeMobileMenu}
+                          className="flex items-center gap-3 py-3 font-inter text-lg text-charcoal hover:text-rose-gold transition-colors border-b border-ivory-200"
+                        >
+                          <Package size={18} />
                           My Orders
                         </Link>
-                        <Link href="/account" onClick={closeMobileMenu} className="flex items-center gap-2 text-sm font-inter text-charcoal hover:text-rose-gold mb-3">
-                          <Settings size={16} />
+                        <Link
+                          href="/wishlist"
+                          onClick={closeMobileMenu}
+                          className="flex items-center gap-3 py-3 font-inter text-lg text-charcoal hover:text-rose-gold transition-colors border-b border-ivory-200"
+                        >
+                          <Heart size={18} />
+                          My Wishlist
+                        </Link>
+                        <Link
+                          href="/account"
+                          onClick={closeMobileMenu}
+                          className="flex items-center gap-3 py-3 font-inter text-lg text-charcoal hover:text-rose-gold transition-colors border-b border-ivory-200"
+                        >
+                          <Settings size={18} />
                           My Account
                         </Link>
                       </>
                     )}
                     <button
-                      onClick={() => { signOut(); closeMobileMenu(); }}
-                      className="flex items-center gap-2 text-sm font-inter text-charcoal hover:text-rose-gold"
+                      onClick={() => { signOut({ callbackUrl: "/" }); closeMobileMenu(); }}
+                      className="flex items-center gap-3 w-full py-3 font-inter text-lg text-charcoal hover:text-rose-gold transition-colors border-b border-ivory-200"
                     >
-                      <LogOut size={16} />
+                      <LogOut size={18} />
                       Sign Out
                     </button>
-                  </>
+                  </div>
                 ) : (
-                  <div className="flex gap-4">
-                    <Link href="/login" onClick={closeMobileMenu} className="btn-primary text-xs py-2.5 px-6">
+                  <div className="flex gap-3">
+                    <Link href="/login" onClick={closeMobileMenu} className="btn-primary text-sm py-2.5 px-6">
                       Sign In
                     </Link>
-                    <Link href="/register" onClick={closeMobileMenu} className="btn-outline text-xs py-2.5 px-6">
+                    <Link href="/register" onClick={closeMobileMenu} className="btn-outline text-sm py-2.5 px-6">
                       Register
                     </Link>
                   </div>
                 )}
               </div>
+
+              {/* SUPPORT */}
+              <div className="mt-8 pt-6 border-t border-ivory-200 pb-8">
+                <p className="section-subtitle text-xs mb-3">Support</p>
+                <Link
+                  href="/help"
+                  onClick={closeMobileMenu}
+                  className="block py-3 font-inter text-lg text-charcoal hover:text-rose-gold transition-colors border-b border-ivory-200"
+                >
+                  Help
+                </Link>
+              </div>
+
             </nav>
           </motion.div>
         )}
