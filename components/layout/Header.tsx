@@ -82,13 +82,15 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
         <div className="section-padding">
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
-            <Link href="/" className="flex-shrink-0">
+            <Link href="/" className="flex-shrink-0 flex items-center">
               <motion.div whileHover={{ scale: 1.02 }} className="flex items-center gap-2">
                 <Image
-                  src="https://res.cloudinary.com/dtwjd2xuy/image/upload/v1776881296/AZALEA-02_finL_pskdqv.png"
+                  src="https://res.cloudinary.com/dtwjd2xuy/image/upload/v1776884511/AZALEA-02_finL_mlayf5.png"
                   alt="Azalea by Zehra logo"
-                  width={40}
-                  height={40}
+                  width={50}
+                  height={50}
+                  sizes="50px"
+                  priority
                   className="object-contain"
                 />
                 <span className="font-playfair text-2xl text-charcoal tracking-wide">
@@ -391,10 +393,11 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
             <div className="flex items-center justify-between px-6 h-20 border-b border-ivory-200">
               <div className="flex items-center gap-2">
                 <Image
-                  src="https://res.cloudinary.com/dtwjd2xuy/image/upload/v1776881296/AZALEA-02_finL_pskdqv.png"
+                  src="https://res.cloudinary.com/dtwjd2xuy/image/upload/v1776884511/AZALEA-02_finL_mlayf5.png"
                   alt="Azalea by Zehra logo"
-                  width={36}
-                  height={36}
+                  width={50}
+                  height={50}
+                  sizes="50px"
                   className="object-contain"
                 />
                 <span className="font-playfair text-2xl text-charcoal">
