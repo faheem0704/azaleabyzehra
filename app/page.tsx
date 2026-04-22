@@ -1,5 +1,6 @@
 export const revalidate = 300; // ISR: refresh every 5 min — product/category data is stable
 
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import MainLayout from "@/components/layout/MainLayout";
 import Hero from "@/components/home/Hero";
@@ -10,7 +11,8 @@ import Testimonials from "@/components/home/Testimonials";
 import LookbookGrid from "@/components/home/LookbookGrid";
 import Newsletter from "@/components/home/Newsletter";
 
-async function getHomeData() {
+const getHomeData = unstable_cache(
+  async () => {
   const [categories, newArrivals, featuredProducts] = await Promise.all([
     prisma.category.findMany({
       where: { parentId: null },
@@ -53,7 +55,10 @@ async function getHomeData() {
   ]);
 
   return { categories, newArrivals, featuredProducts };
-}
+  },
+  ["home-data"],
+  { tags: ["products"], revalidate: 300 }
+);
 
 export default async function HomePage() {
   const { categories, newArrivals, featuredProducts } = await getHomeData();

@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
@@ -117,6 +118,7 @@ export async function PUT(
       return updated;
     });
 
+    revalidateTag("products");
     return NextResponse.json(product);
   } catch (err: any) {
     if (err?.code === "P2002") {
@@ -151,5 +153,6 @@ export async function DELETE(
     throw err;
   }
 
+  revalidateTag("products");
   return NextResponse.json({ message: "Product deleted" });
 }

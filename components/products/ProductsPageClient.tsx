@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useTransition, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import ProductCard from "@/components/products/ProductCard";
 import FilterSidebar from "@/components/products/FilterSidebar";
 import ProductQuickView from "@/components/products/ProductQuickView";
 import { Product } from "@/types";
 import { motion } from "framer-motion";
-import { useSearchParams } from "next/navigation";
 import { SlidersHorizontal } from "lucide-react";
 
 const DEFAULT_FILTERS = {
@@ -22,18 +22,32 @@ interface ProductsPageClientProps {
   initialProducts?: Product[] | null;
   initialTotal?: number | null;
   initialTotalPages?: number | null;
+  initialPage?: number;
 }
 
-export default function ProductsPageClient({ initialProducts, initialTotal, initialTotalPages }: ProductsPageClientProps = {}) {
+export default function ProductsPageClient({
+  initialProducts,
+  initialTotal,
+  initialTotalPages,
+  initialPage = 1,
+}: ProductsPageClientProps = {}) {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const [products, setProducts] = useState<Product[]>(initialProducts ?? []);
-  const [total, setTotal] = useState(initialTotal ?? 0);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(initialTotalPages ?? 1);
-  // Skip first fetch if we have SSR data and no non-default search params
-  const hasInitialData = initialProducts != null && searchParams.toString() === "";
-  const [loading, setLoading] = useState(!hasInitialData);
-  const [filters, setFilters] = useState({ ...DEFAULT_FILTERS });
+  const [isPending, startTransition] = useTransition();
+
+  const products = initialProducts ?? [];
+  const total = initialTotal ?? 0;
+  const totalPages = initialTotalPages ?? 1;
+  const page = initialPage;
+
+  const filters = {
+    sort: searchParams.get("sort") ?? "newest",
+    colors: searchParams.get("colors")?.split(",").filter(Boolean) ?? [],
+    sizes: searchParams.get("sizes")?.split(",").filter(Boolean) ?? [],
+    fabrics: searchParams.get("fabrics")?.split(",").filter(Boolean) ?? [],
+    minPrice: searchParams.get("minPrice") ?? "",
+    maxPrice: searchParams.get("maxPrice") ?? "",
+  };
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
@@ -43,57 +57,64 @@ export default function ProductsPageClient({ initialProducts, initialTotal, init
     (filters.fabrics.length > 0 ? 1 : 0) +
     (filters.minPrice || filters.maxPrice ? 1 : 0);
 
-  const fetchProducts = useCallback(async (currentPage = 1, currentFilters = filters) => {
-    setLoading(true);
-    try {
+  const pushFilters = useCallback(
+    (nextFilters: typeof DEFAULT_FILTERS, nextPage = 1) => {
       const params = new URLSearchParams();
-      if (searchParams.get("category")) params.set("category", searchParams.get("category")!);
-      if (searchParams.get("search")) params.set("search", searchParams.get("search")!);
-      if (searchParams.get("featured")) params.set("featured", "true");
-      if (searchParams.get("isNewArrival")) params.set("isNewArrival", "true");
-      if (currentFilters.minPrice) params.set("minPrice", currentFilters.minPrice);
-      if (currentFilters.maxPrice) params.set("maxPrice", currentFilters.maxPrice);
-      if (currentFilters.colors.length) params.set("colors", currentFilters.colors.join(","));
-      if (currentFilters.sizes.length) params.set("sizes", currentFilters.sizes.join(","));
-      if (currentFilters.fabrics.length) params.set("fabrics", currentFilters.fabrics.join(","));
-      params.set("sort", currentFilters.sort);
-      params.set("page", currentPage.toString());
-      params.set("pageSize", "12");
+      const category = searchParams.get("category");
+      const search = searchParams.get("search");
+      const featured = searchParams.get("featured");
+      const isNewArrival = searchParams.get("isNewArrival");
 
-      const res = await fetch(`/api/products?${params}`);
-      const data = await res.json();
-      setProducts(data.data || []);
-      setTotal(data.total || 0);
-      setTotalPages(data.totalPages || 1);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, searchParams]);
+      if (category) params.set("category", category);
+      if (search) params.set("search", search);
+      if (featured) params.set("featured", "true");
+      if (isNewArrival) params.set("isNewArrival", "true");
+      if (nextFilters.sort && nextFilters.sort !== "newest") params.set("sort", nextFilters.sort);
+      if (nextFilters.minPrice) params.set("minPrice", nextFilters.minPrice);
+      if (nextFilters.maxPrice) params.set("maxPrice", nextFilters.maxPrice);
+      if (nextFilters.colors.length) params.set("colors", nextFilters.colors.join(","));
+      if (nextFilters.sizes.length) params.set("sizes", nextFilters.sizes.join(","));
+      if (nextFilters.fabrics.length) params.set("fabrics", nextFilters.fabrics.join(","));
+      if (nextPage > 1) params.set("page", nextPage.toString());
 
-  const isFirstRender = useRef(true);
-  const debounceRef = useRef<NodeJS.Timeout>();
-  useEffect(() => {
-    if (isFirstRender.current && hasInitialData) {
-      isFirstRender.current = false;
-      return;
-    }
-    isFirstRender.current = false;
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      fetchProducts(1, filters);
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(debounceRef.current);
-  }, [searchParams, filters]); // eslint-disable-line react-hooks/exhaustive-deps
+      const qs = params.toString();
+      startTransition(() => {
+        router.push(`/products${qs ? `?${qs}` : ""}`);
+      });
+    },
+    [router, searchParams]
+  );
 
-  const handleFilterChange = (changed: Partial<typeof filters>) => {
-    setFilters((prev) => ({ ...prev, ...changed }));
+  const handleFilterChange = (changed: Partial<typeof DEFAULT_FILTERS>) => {
+    const next = { ...filters, ...changed };
+    pushFilters(next, 1);
   };
 
-  const handleReset = () => setFilters({ ...DEFAULT_FILTERS });
+  const handleReset = () => {
+    const params = new URLSearchParams();
+    const category = searchParams.get("category");
+    const search = searchParams.get("search");
+    const featured = searchParams.get("featured");
+    const isNewArrival = searchParams.get("isNewArrival");
+    if (category) params.set("category", category);
+    if (search) params.set("search", search);
+    if (featured) params.set("featured", featured);
+    if (isNewArrival) params.set("isNewArrival", isNewArrival);
+    const qs = params.toString();
+    startTransition(() => {
+      router.push(`/products${qs ? `?${qs}` : ""}`);
+    });
+  };
+
+  const handlePageChange = (p: number) => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    pushFilters(filters, p);
+  };
 
   const categoryName = searchParams.get("category") || "All Products";
   const searchQuery = searchParams.get("search");
+
+  const loading = isPending;
 
   const skeletons = Array.from({ length: 12 }).map((_, i) => (
     <div key={i} className="animate-pulse">
@@ -118,7 +139,7 @@ export default function ProductsPageClient({ initialProducts, initialTotal, init
       {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
         <button
           key={p}
-          onClick={() => { setPage(p); fetchProducts(p, filters); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+          onClick={() => handlePageChange(p)}
           className={`w-10 h-10 font-inter text-sm transition-all duration-200 ${
             p === page
               ? "bg-rose-gold text-white"

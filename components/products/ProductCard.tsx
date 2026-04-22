@@ -12,6 +12,9 @@ import { useWishlistStore } from "@/store/wishlistStore";
 import Badge from "@/components/ui/Badge";
 import toast from "react-hot-toast";
 
+const BLUR_FALLBACK =
+  "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMCwsKCwsNCxAQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AJZAAB//2Q==";
+
 // Maps common Indian fashion color names to CSS hex values for accurate swatches.
 // Multi-word names (e.g. "Bottle Green") become broken CSS color names without this.
 const COLOR_HEX: Record<string, string> = {
@@ -119,6 +122,8 @@ export default function ProductCard({ product, onQuickView, priority = false }: 
               priority={priority}
               sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
               className="object-cover transition-transform duration-700 group-hover:scale-105"
+              placeholder="blur"
+              blurDataURL={BLUR_FALLBACK}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-ivory to-ivory-200 flex items-center justify-center">
