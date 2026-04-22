@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -82,7 +83,14 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <Link href="/" className="flex-shrink-0">
-              <motion.div whileHover={{ scale: 1.02 }}>
+              <motion.div whileHover={{ scale: 1.02 }} className="flex items-center gap-2">
+                <Image
+                  src="https://res.cloudinary.com/dtwjd2xuy/image/upload/v1776881296/AZALEA-02_finL_pskdqv.png"
+                  alt="Azalea by Zehra logo"
+                  width={40}
+                  height={40}
+                  className="object-contain"
+                />
                 <span className="font-playfair text-2xl text-charcoal tracking-wide">
                   Azalea <span className="text-rose-gold">by Zehra</span>
                 </span>
@@ -381,9 +389,18 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
             className="fixed inset-0 z-[60] bg-ivory flex flex-col"
           >
             <div className="flex items-center justify-between px-6 h-20 border-b border-ivory-200">
-              <span className="font-playfair text-2xl text-charcoal">
-                Azalea <span className="text-rose-gold">by Zehra</span>
-              </span>
+              <div className="flex items-center gap-2">
+                <Image
+                  src="https://res.cloudinary.com/dtwjd2xuy/image/upload/v1776881296/AZALEA-02_finL_pskdqv.png"
+                  alt="Azalea by Zehra logo"
+                  width={36}
+                  height={36}
+                  className="object-contain"
+                />
+                <span className="font-playfair text-2xl text-charcoal">
+                  Azalea <span className="text-rose-gold">by Zehra</span>
+                </span>
+              </div>
               <button onClick={closeMobileMenu} className="text-charcoal">
                 <X size={22} />
               </button>
