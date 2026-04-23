@@ -23,6 +23,7 @@ const getProduct = cache(async (slug: string) =>
         take: 20,
       },
       variants: true,
+      _count: { select: { reviews: true } },
     },
   })
 );
@@ -40,7 +41,8 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const product = await getProduct(params.slug);
   if (!product) return { title: "Product Not Found" };
-  const desc = product.description.replace(/<[^>]+>/g, "").slice(0, 160);
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://azaleabyzehra.com";
+  const desc = product.description.replace(/<[^>]+>/g, "").slice(0, 160) || `Shop ${product.name} at Azalea by Zehra`;
   const keywords = [
     product.name,
     product.fabric,
@@ -54,7 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: product.name,
     description: desc,
     keywords,
-    alternates: { canonical: `/products/${product.slug}` },
+    alternates: { canonical: `${APP_URL}/products/${product.slug}` },
     openGraph: {
       title: product.name,
       description: desc,
@@ -92,15 +94,15 @@ export default async function ProductDetailPage({ params }: Props) {
     },
   });
 
-  const APP_URL = "https://azaleabyzehra.com";
-  const desc = product.description.replace(/<[^>]+>/g, "").slice(0, 500);
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://azaleabyzehra.com";
+  const desc = product.description.replace(/<[^>]+>/g, "").slice(0, 500) || `Shop ${product.name} at Azalea by Zehra`;
 
-  const reviewsWithRating = product.reviews.filter((r: { rating?: number | null }) => r.rating != null);
+  const reviewsWithRating = product.reviews;
   const aggregateRating = reviewsWithRating.length > 0
     ? {
         "@type": "AggregateRating",
         ratingValue: (reviewsWithRating.reduce((s: number, r: { rating: number }) => s + r.rating, 0) / reviewsWithRating.length).toFixed(1),
-        reviewCount: reviewsWithRating.length,
+        reviewCount: product._count.reviews,
         bestRating: 5,
         worstRating: 1,
       }
@@ -150,7 +152,7 @@ export default async function ProductDetailPage({ params }: Props) {
     <MainLayout>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/<\//g, "<\\/") }}
       />
       <ProductDetailClient product={product as any} related={related as any} />
     </MainLayout>
