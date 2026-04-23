@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Truck, Printer, MessageCircle, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronUp, Truck, Printer, MessageCircle, RotateCcw, Package } from "lucide-react";
 import { Order } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
@@ -51,6 +51,10 @@ export default function AdminOrdersClient({ orders: initialOrders, totalCount, c
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [trackingInputs, setTrackingInputs] = useState<Record<string, string>>({});
+  const [shiprocketOpen, setShiprocketOpen] = useState<Record<string, boolean>>({});
+  const [pickupLocations, setPickupLocations] = useState<{ pickup_location: string; city: string }[]>([]);
+  const [shipmentForm, setShipmentForm] = useState<Record<string, { pickupLocation: string; weight: string }>>({});
+  const [creatingShipment, setCreatingShipment] = useState<string | null>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -85,6 +89,45 @@ export default function AdminOrdersClient({ orders: initialOrders, totalCount, c
       toast.error("Failed to update order");
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const loadPickupLocations = async () => {
+    if (pickupLocations.length > 0) return;
+    try {
+      const res = await fetch("/api/admin/pickup-locations");
+      if (res.ok) {
+        const data = await res.json();
+        setPickupLocations(data.locations || []);
+      }
+    } catch { /* silent */ }
+  };
+
+  const createShipmentOnShiprocket = async (orderId: string) => {
+    const form = shipmentForm[orderId];
+    if (!form?.pickupLocation || !form?.weight) { toast.error("Select pickup location and weight"); return; }
+    setCreatingShipment(orderId);
+    try {
+      const res = await fetch("/api/admin/shipment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, pickupLocation: form.pickupLocation, weight: parseFloat(form.weight) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId
+            ? { ...o, status: "SHIPPED" as any, trackingId: data.awbCode, awbCode: data.awbCode, courierName: data.courierName }
+            : o
+        )
+      );
+      setShiprocketOpen((p) => ({ ...p, [orderId]: false }));
+      toast.success(`Shipment created! AWB: ${data.awbCode} · ${data.courierName}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Shipment creation failed");
+    } finally {
+      setCreatingShipment(null);
     }
   };
 
@@ -440,33 +483,110 @@ export default function AdminOrdersClient({ orders: initialOrders, totalCount, c
                           </div>
                         )}
 
-                        {/* Tracking ID */}
+                        {/* Shipment */}
                         <div className="border-t border-ivory-200 pt-4">
                           <div className="flex items-center gap-2 mb-3">
                             <Truck size={14} className="text-rose-gold" />
-                            <h4 className="font-inter text-xs tracking-widest uppercase text-charcoal-light">Tracking ID</h4>
+                            <h4 className="font-inter text-xs tracking-widest uppercase text-charcoal-light">Shipment</h4>
                           </div>
-                          {order.trackingId && (
+
+                          {(order as any).awbCode ? (
+                            <div className="bg-ivory p-3 border border-ivory-200 mb-3">
+                              <p className="font-inter text-xs text-mauve mb-1">AWB Code</p>
+                              <p className="font-inter text-sm font-medium text-charcoal">{(order as any).awbCode}</p>
+                              {(order as any).courierName && (
+                                <p className="font-inter text-xs text-mauve mt-1">{(order as any).courierName}</p>
+                              )}
+                            </div>
+                          ) : order.trackingId ? (
                             <p className="font-inter text-sm text-charcoal mb-3 font-medium">{order.trackingId}</p>
+                          ) : null}
+
+                          {order.status === "PROCESSING" && !(order as any).awbCode && (
+                            <div className="mb-3">
+                              <button
+                                onClick={() => {
+                                  setShiprocketOpen((p) => ({ ...p, [order.id]: !p[order.id] }));
+                                  loadPickupLocations();
+                                  if (!shipmentForm[order.id]) {
+                                    setShipmentForm((p) => ({ ...p, [order.id]: { pickupLocation: "", weight: "0.5" } }));
+                                  }
+                                }}
+                                className="flex items-center gap-2 w-full px-3 py-2.5 bg-charcoal text-ivory text-xs font-inter hover:bg-charcoal-dark transition-colors"
+                              >
+                                <Package size={13} />
+                                Create Shipment on Shiprocket
+                              </button>
+
+                              {shiprocketOpen[order.id] && (
+                                <div className="border border-charcoal/20 p-3 space-y-3 mt-1">
+                                  <div>
+                                    <label className="font-inter text-xs text-mauve block mb-1">Pickup Location</label>
+                                    {pickupLocations.length === 0 ? (
+                                      <p className="font-inter text-xs text-mauve italic">Loading locations…</p>
+                                    ) : (
+                                      <select
+                                        value={shipmentForm[order.id]?.pickupLocation || ""}
+                                        onChange={(e) => setShipmentForm((p) => ({ ...p, [order.id]: { ...p[order.id], pickupLocation: e.target.value } }))}
+                                        className="w-full border border-ivory-200 px-3 py-2 text-sm font-inter focus:outline-none focus:border-rose-gold bg-white"
+                                      >
+                                        <option value="">Select location</option>
+                                        {pickupLocations.map((l) => (
+                                          <option key={l.pickup_location} value={l.pickup_location}>
+                                            {l.pickup_location} — {l.city}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <label className="font-inter text-xs text-mauve block mb-1">Weight (kg)</label>
+                                    <input
+                                      type="number"
+                                      min="0.1"
+                                      max="5"
+                                      step="0.1"
+                                      value={shipmentForm[order.id]?.weight || "0.5"}
+                                      onChange={(e) => setShipmentForm((p) => ({ ...p, [order.id]: { ...p[order.id], weight: e.target.value } }))}
+                                      className="w-full border border-ivory-200 px-3 py-2 text-sm font-inter focus:outline-none focus:border-rose-gold"
+                                    />
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => createShipmentOnShiprocket(order.id)}
+                                    disabled={creatingShipment === order.id}
+                                    loading={creatingShipment === order.id}
+                                    className="w-full"
+                                  >
+                                    Create & Assign AWB
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
                           )}
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              placeholder="Enter tracking ID"
-                              value={trackingInputs[order.id] || ""}
-                              onChange={(e) => setTrackingInputs((p) => ({ ...p, [order.id]: e.target.value }))}
-                              className="flex-1 border border-ivory-200 px-3 py-2 text-sm font-inter focus:outline-none focus:border-rose-gold"
-                            />
-                            <Button
-                              size="sm"
-                              onClick={() => updateOrder(order.id, "SHIPPED", trackingInputs[order.id])}
-                              disabled={!trackingInputs[order.id] || updatingId === order.id}
-                              loading={updatingId === order.id}
-                            >
-                              Ship
-                            </Button>
-                          </div>
-                          <p className="mt-2 text-xs font-inter text-mauve">Saving tracking ID marks order as Shipped and notifies customer</p>
+
+                          {!(order as any).awbCode && (
+                            <>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="Or enter tracking ID manually"
+                                  value={trackingInputs[order.id] || ""}
+                                  onChange={(e) => setTrackingInputs((p) => ({ ...p, [order.id]: e.target.value }))}
+                                  className="flex-1 border border-ivory-200 px-3 py-2 text-sm font-inter focus:outline-none focus:border-rose-gold"
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => updateOrder(order.id, "SHIPPED", trackingInputs[order.id])}
+                                  disabled={!trackingInputs[order.id] || updatingId === order.id}
+                                  loading={updatingId === order.id}
+                                >
+                                  Ship
+                                </Button>
+                              </div>
+                              <p className="mt-2 text-xs font-inter text-mauve">Manual tracking notifies customer via email & SMS</p>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
