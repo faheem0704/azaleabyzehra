@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { sendShipmentEmail } from "@/lib/resend";
+import { sendShipmentEmail, sendReviewRequestEmail } from "@/lib/resend";
 import { sendShipmentSMS } from "@/lib/twilio";
 
 export async function GET(
@@ -101,6 +101,8 @@ export async function PUT(
 
   const { status, trackingId } = await req.json();
 
+  const current = await prisma.order.findUnique({ where: { id: params.id }, select: { status: true } });
+
   // RETURNED: also set paymentStatus to REFUNDED
   const extraData: Record<string, unknown> = {};
   if (status === "RETURNED") {
@@ -117,8 +119,20 @@ export async function PUT(
     include: {
       user: true,
       address: true,
+      items: { include: { product: { select: { name: true } } } },
     },
   });
+
+  // Trigger review request when status changes to DELIVERED
+  if (status === "DELIVERED" && current?.status !== "DELIVERED") {
+    const email = order.user?.email || order.guestEmail;
+    if (email) {
+      const itemNames = order.items.map((item) => ({ name: item.product.name }));
+      sendReviewRequestEmail(email, order.id, itemNames).catch(console.error);
+    } else {
+      console.warn(`[review-email] No email for order ${order.id} — skipping review request`);
+    }
+  }
 
   // Trigger shipment notifications when status changes to SHIPPED
   if (status === "SHIPPED" && trackingId) {
@@ -126,10 +140,10 @@ export async function PUT(
     const phone = order.user?.phone;
 
     if (email) {
-      await sendShipmentEmail(email, order.id, trackingId).catch(console.error);
+      sendShipmentEmail(email, order.id, trackingId).catch(console.error);
     }
     if (phone) {
-      await sendShipmentSMS(phone, order.id, trackingId).catch(console.error);
+      sendShipmentSMS(phone, order.id, trackingId).catch(console.error);
     }
   }
 

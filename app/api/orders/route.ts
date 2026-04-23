@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { items, address, selectedAddressId, paymentId, paymentGateway, promoCode } = body;
+    const { items, address, selectedAddressId, paymentId, razorpayOrderId, paymentGateway, promoCode } = body;
 
     if (!items?.length) {
       return NextResponse.json({ error: "No items in order" }, { status: 400 });
@@ -248,7 +248,9 @@ export async function POST(req: NextRequest) {
         discountAmount: validatedDiscount,
         promoCode: validatedPromoCode,
         addressId: resolvedAddressId,
+        status: paymentId ? "PROCESSING" : "PENDING",
         paymentId: paymentId || null,
+        razorpayOrderId: razorpayOrderId || null,
         paymentStatus: paymentId ? "PAID" : "PENDING",
         paymentGateway: paymentGateway || null,
         items: {

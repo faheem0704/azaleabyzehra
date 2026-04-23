@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { sendWelcomeEmail } from "@/lib/resend";
 
 export async function POST(req: NextRequest) {
   try {
@@ -61,6 +62,10 @@ export async function POST(req: NextRequest) {
         },
       });
     });
+
+    if (isEmail) {
+      sendWelcomeEmail(name.trim(), normalizedContact).catch(console.error);
+    }
 
     return NextResponse.json({ message: "Account created successfully" });
   } catch (error) {

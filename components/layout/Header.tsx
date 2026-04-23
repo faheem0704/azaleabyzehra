@@ -69,7 +69,7 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
     { label: "Help", href: "/help" },
   ];
 
-  const staticShopLinks = [
+  const staticShopLinks: { label: string; href: string; sale?: boolean }[] = [
     { label: "New Arrivals", href: "/new-arrivals" },
     { label: "Influencers Collection", href: "/products?featured=true" },
     { label: "Best Sellers", href: "/products?sort=popular" },
@@ -433,7 +433,7 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                       onClick={closeMobileMenu}
                       className={cn(
                         "block py-3 font-inter text-lg transition-colors border-b border-ivory-200",
-                        (item as { sale?: boolean }).sale
+                        item.sale
                           ? "text-red-600 hover:text-red-700 font-semibold"
                           : "text-charcoal hover:text-rose-gold"
                       )}

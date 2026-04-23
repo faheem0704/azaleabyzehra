@@ -293,8 +293,18 @@ export default function CheckoutPageClient() {
             }),
           });
           const { verified, paymentId } = await verifyRes.json();
-          if (verified) await placeOrder(paymentId, "RAZORPAY");
+          if (verified) await placeOrder(paymentId, "RAZORPAY", response.razorpay_order_id);
           else toast.error("Payment verification failed");
+        },
+        modal: {
+          ondismiss: () => {
+            toast.error("Payment cancelled. You can try again.");
+            setLoading(false);
+          },
+        },
+        "payment.failed": (response: { error: { description: string } }) => {
+          toast.error(response.error.description || "Payment failed. Please try again.");
+          setLoading(false);
         },
         prefill: { name: address.name, contact: address.phone, email: session?.user?.email ?? "" },
         theme: { color: "#C9956C" },
@@ -303,12 +313,11 @@ export default function CheckoutPageClient() {
       new window.Razorpay(options).open();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Payment failed");
-    } finally {
       setLoading(false);
     }
   };
 
-  const placeOrder = async (paymentId?: string, gateway?: string) => {
+  const placeOrder = async (paymentId?: string, gateway?: string, razorpayOrderId?: string) => {
     setLoading(true);
     try {
       const res = await fetch("/api/orders", {
@@ -322,6 +331,7 @@ export default function CheckoutPageClient() {
           address,
           selectedAddressId, // BUG-04: send saved address ID to avoid duplicate creation
           paymentId,
+          razorpayOrderId: razorpayOrderId ?? null,
           paymentGateway: gateway,
           promoCode: appliedPromo?.code,
         }),

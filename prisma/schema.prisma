@@ -5,6 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -205,6 +206,7 @@ model Order {
   trackingId     String?
   addressId      String
   paymentId      String?
+  razorpayOrderId String?
   paymentStatus  PaymentStatus   @default(PENDING)
   paymentGateway PaymentGateway?
   createdAt      DateTime        @default(now())
