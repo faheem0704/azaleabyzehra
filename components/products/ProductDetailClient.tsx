@@ -156,6 +156,7 @@ export default function ProductDetailClient({ product, related }: Props) {
 
   const addItem = useCartStore((s) => s.addItem);
   const openCart = useCartStore((s) => s.openCart);
+  const cartItems = useCartStore((s) => s.items);
   const { addItem: addToWishlist, removeItem: removeFromWishlist, hasItem } = useWishlistStore();
   const isWishlisted = hasItem(product.id);
 
@@ -164,13 +165,22 @@ export default function ProductDetailClient({ product, related }: Props) {
       ? product.reviews.reduce((sum, r) => sum + r.rating, 0) / product.reviews.length
       : 0;
 
+  // How many of this exact variant the user already has in their cart
+  const alreadyInCart = cartItems.find(
+    (i) => i.productId === product.id && i.size === selectedSize && i.color === selectedColor
+  )?.quantity ?? 0;
+  // How many more can actually be added without exceeding stock
+  const maxCanAdd = Math.max(0, effectiveStock - alreadyInCart);
+
   const handleAddToCart = () => {
     if (!selectedSize) { toast.error("Please select a size"); return; }
     if (!selectedColor) { toast.error("Please select a color"); return; }
     if (effectiveStock <= 0) { toast.error("This variant is out of stock"); return; }
-    addItem({ productId: product.id, product, quantity, size: selectedSize, color: selectedColor, price: product.price });
+    if (maxCanAdd <= 0) { toast.error("You already have all available stock in your cart"); return; }
+    const qtyToAdd = Math.min(quantity, maxCanAdd);
+    addItem({ productId: product.id, product, quantity: qtyToAdd, size: selectedSize, color: selectedColor, price: product.price });
     openCart();
-    toast.success("Added to cart!");
+    toast.success(qtyToAdd < quantity ? `Added ${qtyToAdd} to cart (stock limit reached)` : "Added to cart!");
   };
 
   return (
@@ -436,7 +446,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                           return (
                             <button
                               key={color}
-                              onClick={() => { if (!oos) { setSelectedColor(color); setSelectedImage(0); } }}
+                              onClick={() => { if (!oos) { setSelectedColor(color); setSelectedImage(0); setQuantity(1); } }}
                               disabled={oos}
                               className={`relative px-4 py-2 text-sm font-inter border transition-all duration-200 ${
                                 oos
@@ -488,7 +498,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                         return (
                           <button
                             key={size}
-                            onClick={() => !oos && setSelectedSize(size)}
+                            onClick={() => { if (!oos) { setSelectedSize(size); setQuantity(1); } }}
                             disabled={oos}
                             className={`relative min-w-[48px] px-4 py-2.5 text-sm font-inter border transition-all duration-200 ${
                               oos
@@ -524,7 +534,7 @@ export default function ProductDetailClient({ product, related }: Props) {
                           return (
                             <button
                               key={color}
-                              onClick={() => { if (!oos) { setSelectedColor(color); setSelectedImage(0); } }}
+                              onClick={() => { if (!oos) { setSelectedColor(color); setSelectedImage(0); setQuantity(1); } }}
                               disabled={oos}
                               className={`relative px-4 py-2 text-sm font-inter border transition-all duration-200 ${
                                 oos
@@ -560,8 +570,8 @@ export default function ProductDetailClient({ product, related }: Props) {
                     </button>
                     <span className="w-14 text-center font-inter text-sm text-charcoal">{quantity}</span>
                     <button
-                      onClick={() => setQuantity(q => Math.min(Math.max(effectiveStock, 1), q + 1))}
-                      disabled={effectiveStock <= 0}
+                      onClick={() => setQuantity(q => Math.min(maxCanAdd, q + 1))}
+                      disabled={quantity >= maxCanAdd || maxCanAdd <= 0}
                       className="w-11 h-11 flex items-center justify-center text-charcoal hover:text-rose-gold transition-colors disabled:opacity-30"
                     >
                       +

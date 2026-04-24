@@ -205,7 +205,7 @@ model Order {
   trackingId     String?
   courierName    String?
   addressId      String
-  paymentId      String?
+  paymentId      String?  @unique
   razorpayOrderId String?
   paymentStatus  PaymentStatus   @default(PENDING)
   paymentGateway PaymentGateway?
