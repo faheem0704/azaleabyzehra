@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, Truck, Printer, MessageCircle, RotateCcw } from "lucide-react";
 import { Order } from "@/types";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, COURIERS } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import toast from "react-hot-toast";
@@ -51,26 +51,27 @@ export default function AdminOrdersClient({ orders: initialOrders, totalCount, c
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [trackingInputs, setTrackingInputs] = useState<Record<string, string>>({});
+  const [courierInputs, setCourierInputs] = useState<Record<string, string>>({});
 
   // Filters
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [paymentFilter, setPaymentFilter] = useState("ALL");
   const [dateRange, setDateRange] = useState<DateRange>("all");
 
-  const updateOrder = async (orderId: string, status: string, trackingId?: string) => {
+  const updateOrder = async (orderId: string, status: string, trackingId?: string, courierName?: string) => {
     setUpdatingId(orderId);
     try {
       const res = await fetch(`/api/orders/${orderId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status, trackingId }),
+        body: JSON.stringify({ status, trackingId, courierName }),
       });
       if (!res.ok) throw new Error("Update failed");
       const updated = await res.json();
       setOrders((prev) =>
         prev.map((o) =>
           o.id === orderId
-            ? { ...o, status: updated.status, trackingId: updated.trackingId, paymentStatus: updated.paymentStatus }
+            ? { ...o, status: updated.status, trackingId: updated.trackingId, courierName: updated.courierName, paymentStatus: updated.paymentStatus }
             : o
         )
       );
@@ -444,29 +445,44 @@ export default function AdminOrdersClient({ orders: initialOrders, totalCount, c
                         <div className="border-t border-ivory-200 pt-4">
                           <div className="flex items-center gap-2 mb-3">
                             <Truck size={14} className="text-rose-gold" />
-                            <h4 className="font-inter text-xs tracking-widest uppercase text-charcoal-light">Tracking ID</h4>
+                            <h4 className="font-inter text-xs tracking-widest uppercase text-charcoal-light">Tracking</h4>
                           </div>
                           {order.trackingId && (
-                            <p className="font-inter text-sm text-charcoal mb-3 font-medium">{order.trackingId}</p>
+                            <div className="mb-3 p-3 bg-ivory border border-ivory-200">
+                              <p className="font-inter text-xs text-mauve mb-1">{(order as any).courierName || "Tracking ID"}</p>
+                              <p className="font-inter text-sm font-medium text-charcoal">{order.trackingId}</p>
+                            </div>
                           )}
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              placeholder="Enter tracking ID"
-                              value={trackingInputs[order.id] || ""}
-                              onChange={(e) => setTrackingInputs((p) => ({ ...p, [order.id]: e.target.value }))}
-                              className="flex-1 border border-ivory-200 px-3 py-2 text-sm font-inter focus:outline-none focus:border-rose-gold"
-                            />
-                            <Button
-                              size="sm"
-                              onClick={() => updateOrder(order.id, "SHIPPED", trackingInputs[order.id])}
-                              disabled={!trackingInputs[order.id] || updatingId === order.id}
-                              loading={updatingId === order.id}
+                          <div className="space-y-2">
+                            <select
+                              value={courierInputs[order.id] || ""}
+                              onChange={(e) => setCourierInputs((p) => ({ ...p, [order.id]: e.target.value }))}
+                              className="w-full border border-ivory-200 px-3 py-2 text-sm font-inter focus:outline-none focus:border-rose-gold bg-white text-charcoal"
                             >
-                              Ship
-                            </Button>
+                              <option value="">Select courier</option>
+                              {COURIERS.map((c) => (
+                                <option key={c.value} value={c.value}>{c.name}</option>
+                              ))}
+                            </select>
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder="Enter tracking / AWB number"
+                                value={trackingInputs[order.id] || ""}
+                                onChange={(e) => setTrackingInputs((p) => ({ ...p, [order.id]: e.target.value }))}
+                                className="flex-1 border border-ivory-200 px-3 py-2 text-sm font-inter focus:outline-none focus:border-rose-gold"
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => updateOrder(order.id, "SHIPPED", trackingInputs[order.id], courierInputs[order.id])}
+                                disabled={!trackingInputs[order.id] || updatingId === order.id}
+                                loading={updatingId === order.id}
+                              >
+                                Ship
+                              </Button>
+                            </div>
                           </div>
-                          <p className="mt-2 text-xs font-inter text-mauve">Saving tracking ID marks order as Shipped and notifies customer</p>
+                          <p className="mt-2 text-xs font-inter text-mauve">Marks order as Shipped and notifies customer</p>
                         </div>
                       </div>
                     </div>

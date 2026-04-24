@@ -99,7 +99,7 @@ export async function PUT(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { status, trackingId } = await req.json();
+  const { status, trackingId, courierName } = await req.json();
 
   const current = await prisma.order.findUnique({ where: { id: params.id }, select: { status: true } });
 
@@ -114,6 +114,7 @@ export async function PUT(
     data: {
       status,
       ...(trackingId ? { trackingId } : {}),
+      ...(courierName !== undefined ? { courierName } : {}),
       ...extraData,
     },
     include: {
@@ -140,7 +141,7 @@ export async function PUT(
     const phone = order.user?.phone;
 
     if (email) {
-      sendShipmentEmail(email, order.id, trackingId).catch(console.error);
+      sendShipmentEmail(email, order.id, trackingId, courierName).catch(console.error);
     }
     if (phone) {
       sendShipmentSMS(phone, order.id, trackingId).catch(console.error);

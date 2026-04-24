@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, COURIERS, getTrackingUrl } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { ArrowLeftRight, X } from "lucide-react";
@@ -219,9 +219,21 @@ export default function OrdersPageClient({ orders: initial }: { orders: any[] })
                 {/* Tracking */}
                 {order.trackingId && (
                   <div className="border-t border-ivory-200 px-6 py-3 bg-ivory-200/30">
-                    <p className="font-inter text-xs text-charcoal-light">
-                      Tracking ID: <span className="font-medium text-charcoal">{order.trackingId}</span>
+                    <p className="font-inter text-xs text-mauve">
+                      {order.courierName ? COURIERS.find((c) => c.value === order.courierName)?.name ?? order.courierName : "Tracking ID"}
                     </p>
+                    {order.courierName && getTrackingUrl(order.courierName, order.trackingId) ? (
+                      <a
+                        href={getTrackingUrl(order.courierName, order.trackingId)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-inter text-sm font-medium text-rose-gold hover:underline"
+                      >
+                        {order.trackingId} →
+                      </a>
+                    ) : (
+                      <p className="font-inter text-sm font-medium text-charcoal">{order.trackingId}</p>
+                    )}
                   </div>
                 )}
 

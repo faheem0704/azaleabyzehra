@@ -203,6 +203,7 @@ model Order {
   promoCode      String?
   status         OrderStatus     @default(PENDING)
   trackingId     String?
+  courierName    String?
   addressId      String
   paymentId      String?
   razorpayOrderId String?

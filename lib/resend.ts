@@ -208,7 +208,8 @@ export async function sendReviewRequestEmail(
 export async function sendShipmentEmail(
   email: string,
   orderId: string,
-  trackingId: string
+  trackingId: string,
+  courierName?: string
 ): Promise<void> {
   await getResend().emails.send({
     from: FROM,
@@ -220,8 +221,9 @@ export async function sendShipmentEmail(
         <h2 style="font-size: 20px; color: #C9956C;">Your order is on its way!</h2>
         <div style="background: #fff; border: 1px solid #F5EDE0; border-radius: 12px; padding: 32px; text-align: center; margin: 24px 0;">
           <p style="color: #6B6B6B;">Order #${orderId.slice(-8).toUpperCase()}</p>
-          <p style="color: #6B6B6B; font-size: 14px;">Tracking ID:</p>
+          <p style="color: #6B6B6B; font-size: 14px;">${courierName ? escHtml(courierName.toUpperCase()) + " · " : ""}Tracking ID:</p>
           <div style="font-size: 24px; font-weight: 700; letter-spacing: 4px; color: #C9956C; margin: 12px 0;">${escHtml(trackingId)}</div>
+          <p style="font-size: 13px; color: #6B6B6B; margin: 8px 0 0 0;">Use this ID to track your order on the courier's website.</p>
         </div>
         <p style="color: #A8929E; font-size: 13px; text-align: center;">
           <a href="${APP_URL}/orders" style="color: #C9956C;">View your order status →</a>
