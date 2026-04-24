@@ -37,14 +37,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid or expired verification code" }, { status: 400 });
     }
 
-    // Check duplicate before entering the transaction (fast-fail)
-    const existing = await prisma.user.findFirst({
-      where: isEmail ? { email: normalizedContact } : { phone: normalizedContact },
-    });
-    if (existing) {
-      return NextResponse.json({ error: "An account with this contact already exists" }, { status: 409 });
-    }
-
     const passwordHash = await bcrypt.hash(password, 12);
 
     // BUG-09: mark OTP used and create user atomically
@@ -68,7 +60,10 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ message: "Account created successfully" });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "P2002") {
+      return NextResponse.json({ error: "An account with this contact already exists" }, { status: 409 });
+    }
     console.error("Register OTP error:", error);
     return NextResponse.json({ error: "Registration failed" }, { status: 500 });
   }

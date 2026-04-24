@@ -50,41 +50,39 @@ export async function PATCH(
   if (order.userId !== session.user.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (order.status !== "PENDING") return NextResponse.json({ error: "Only PENDING orders can be cancelled" }, { status: 400 });
 
-  // Restore variant stock (falls back to product.stock if no variant found)
   const items = await prisma.orderItem.findMany({ where: { orderId: params.id } });
-  await Promise.all(
-    items.map(async (item) => {
-      const variant = await prisma.productVariant.findUnique({
+
+  // Stock restore + order status update are atomic — if either fails, neither commits
+  const updated = await prisma.$transaction(async (tx) => {
+    for (const item of items) {
+      const variant = await tx.productVariant.findUnique({
         where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color } },
-      }).catch(() => null);
+      });
 
       if (variant) {
-        await prisma.productVariant.update({
+        await tx.productVariant.update({
           where: { id: variant.id },
           data: { stock: { increment: item.quantity } },
-        }).catch(() => {});
-
-        // Sync product total
-        const total = await prisma.productVariant.aggregate({
+        });
+        const total = await tx.productVariant.aggregate({
           where: { productId: item.productId },
           _sum: { stock: true },
         });
-        await prisma.product.update({
+        await tx.product.update({
           where: { id: item.productId },
           data: { stock: total._sum.stock ?? 0 },
-        }).catch(() => {});
+        });
       } else {
-        await prisma.product.update({
+        await tx.product.update({
           where: { id: item.productId },
           data: { stock: { increment: item.quantity } },
-        }).catch(() => {});
+        });
       }
-    })
-  );
-
-  const updated = await prisma.order.update({
-    where: { id: params.id },
-    data: { status: "CANCELLED" },
+    }
+    return tx.order.update({
+      where: { id: params.id },
+      data: { status: "CANCELLED" },
+    });
   });
 
   return NextResponse.json(updated);
@@ -100,6 +98,11 @@ export async function PUT(
   }
 
   const { status, trackingId, courierName } = await req.json();
+
+  const VALID_STATUSES = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED", "RETURNED"];
+  if (status && !VALID_STATUSES.includes(status)) {
+    return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
+  }
 
   const current = await prisma.order.findUnique({ where: { id: params.id }, select: { status: true } });
 

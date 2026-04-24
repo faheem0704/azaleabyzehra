@@ -9,10 +9,21 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
+
   const variants = await prisma.productVariant.findMany({
     where: { productId: params.id },
     orderBy: [{ size: "asc" }, { color: "asc" }],
   });
+
+  // SKUs are internal identifiers — only expose to admins
+  if (!isAdmin) {
+    return NextResponse.json(variants.map(({ sku: _sku, ...v }) => v));
+  }
   return NextResponse.json(variants);
 }
 

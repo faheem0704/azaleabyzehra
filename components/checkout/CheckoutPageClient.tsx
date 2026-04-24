@@ -30,7 +30,7 @@ declare global {
 
 export default function CheckoutPageClient() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const { items, totalPrice, clearCart, appliedPromo, setPromo, setItems } = useCartStore();
 
   const [step, setStep] = useState<Step>(1);
@@ -121,6 +121,8 @@ export default function CheckoutPageClient() {
       })
       .catch(() => {}); // silent fail — server validates prices at order creation anyway
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (sessionStatus === "loading") return null;
 
   if (items.length === 0) {
     return (

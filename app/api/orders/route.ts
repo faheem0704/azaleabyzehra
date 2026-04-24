@@ -124,12 +124,18 @@ export async function POST(req: NextRequest) {
     const dbPriceMap = new Map(dbProducts.map((p) => [p.id, p.price]));
     const dbSlugMap = new Map(dbProducts.map((p) => [p.id, p.slug]));
 
+    // Reject if any product ID is not in the DB — never fall back to client-sent prices
+    const unknownItem = (items as { productId: string }[]).find((i) => !dbPriceMap.has(i.productId));
+    if (unknownItem) {
+      return NextResponse.json({ error: "One or more items in your cart are no longer available" }, { status: 400 });
+    }
+
     // Build authorizedItems — same shape as client items but with DB prices
     const authorizedItems = (
       items as { productId: string; quantity: number; size: string; color: string; price: number }[]
     ).map((item) => ({
       ...item,
-      price: dbPriceMap.get(item.productId) ?? item.price, // fallback: product not found edge case
+      price: dbPriceMap.get(item.productId)!,
     }));
 
     // ── Subtotal & shipping ────────────────────────────────────────────────
