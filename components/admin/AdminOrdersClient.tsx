@@ -412,7 +412,7 @@ export default function AdminOrdersClient({ orders: initialOrders, totalCount, c
                               </div>
                               <span className="font-inter text-sm text-charcoal">{s}</span>
                               <button
-                                onClick={() => updateOrder(order.id, s, s === "SHIPPED" ? trackingInputs[order.id] : undefined)}
+                                onClick={() => updateOrder(order.id, s, s === "SHIPPED" ? trackingInputs[order.id] : undefined, s === "SHIPPED" ? courierInputs[order.id] : undefined)}
                                 disabled={order.status === s || updatingId === order.id}
                                 className="ml-auto text-xs font-inter text-rose-gold hover:text-rose-gold-dark disabled:opacity-30 transition-colors"
                               >
@@ -449,13 +449,13 @@ export default function AdminOrdersClient({ orders: initialOrders, totalCount, c
                           </div>
                           {order.trackingId && (
                             <div className="mb-3 p-3 bg-ivory border border-ivory-200">
-                              <p className="font-inter text-xs text-mauve mb-1">{(order as any).courierName || "Tracking ID"}</p>
+                              <p className="font-inter text-xs text-mauve mb-1">{order.courierName ? (COURIERS.find((c) => c.value === order.courierName)?.name ?? order.courierName) : "Tracking ID"}</p>
                               <p className="font-inter text-sm font-medium text-charcoal">{order.trackingId}</p>
                             </div>
                           )}
                           <div className="space-y-2">
                             <select
-                              value={courierInputs[order.id] || ""}
+                              value={courierInputs[order.id] ?? order.courierName ?? ""}
                               onChange={(e) => setCourierInputs((p) => ({ ...p, [order.id]: e.target.value }))}
                               className="w-full border border-ivory-200 px-3 py-2 text-sm font-inter focus:outline-none focus:border-rose-gold bg-white text-charcoal"
                             >

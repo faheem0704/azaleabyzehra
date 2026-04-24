@@ -217,25 +217,28 @@ export default function OrdersPageClient({ orders: initial }: { orders: any[] })
                 </div>
 
                 {/* Tracking */}
-                {order.trackingId && (
-                  <div className="border-t border-ivory-200 px-6 py-3 bg-ivory-200/30">
-                    <p className="font-inter text-xs text-mauve">
-                      {order.courierName ? COURIERS.find((c) => c.value === order.courierName)?.name ?? order.courierName : "Tracking ID"}
-                    </p>
-                    {order.courierName && getTrackingUrl(order.courierName, order.trackingId) ? (
-                      <a
-                        href={getTrackingUrl(order.courierName, order.trackingId)!}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-inter text-sm font-medium text-rose-gold hover:underline"
-                      >
-                        {order.trackingId} →
-                      </a>
-                    ) : (
-                      <p className="font-inter text-sm font-medium text-charcoal">{order.trackingId}</p>
-                    )}
-                  </div>
-                )}
+                {order.trackingId && (() => {
+                  const trackingUrl = order.courierName ? getTrackingUrl(order.courierName, order.trackingId) : null;
+                  return (
+                    <div className="border-t border-ivory-200 px-6 py-3 bg-ivory-200/30">
+                      <p className="font-inter text-xs text-mauve">
+                        {order.courierName ? COURIERS.find((c) => c.value === order.courierName)?.name ?? order.courierName : "Tracking ID"}
+                      </p>
+                      {trackingUrl ? (
+                        <a
+                          href={trackingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-inter text-sm font-medium text-rose-gold hover:underline"
+                        >
+                          {order.trackingId} →
+                        </a>
+                      ) : (
+                        <p className="font-inter text-sm font-medium text-charcoal">{order.trackingId}</p>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Address */}
                 <div className="border-t border-ivory-200 px-6 py-3">

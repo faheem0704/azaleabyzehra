@@ -44,14 +44,14 @@ export const COURIERS = [
 
 export function getTrackingUrl(courier: string, awb: string): string | null {
   switch (courier) {
-    case "delhivery":   return `https://www.delhivery.com/track/package/${awb}`;
+    case "delhivery":   return `https://www.delhivery.com/tracking/?awb=${awb}`;
     case "dtdc":        return `https://www.dtdc.in/tracking.asp?awb=${awb}`;
-    case "bluedart":    return `https://www.bluedart.com/tracking/${awb}`;
+    case "bluedart":    return `https://www.bluedart.com/tracking?trackFor=0&trackNo=${awb}`;
     case "ekart":       return `https://ekartlogistics.com/shipmenttrack/${awb}`;
     case "xpressbees":  return `https://www.xpressbees.com/shipment/tracking/${awb}`;
     case "ecom_express":return `https://ecomexpress.in/tracking/?awb_field=${awb}`;
     case "shadowfax":   return `https://tracker.shadowfax.in/?orderNumber=${awb}`;
-    case "india_post":  return `https://www.indiapost.gov.in/VAS/Pages/trackconsignment.aspx`;
+    case "india_post":  return null; // India Post URL can't embed AWB — show plain text instead
     default:            return null;
   }
 }

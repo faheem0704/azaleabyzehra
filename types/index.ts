@@ -118,6 +118,7 @@ export interface Order {
   totalAmount: number;
   status: OrderStatus;
   trackingId: string | null;
+  courierName: string | null;
   addressId: string;
   address?: Address;
   paymentId: string | null;

@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { COURIERS } from "@/lib/utils";
 
 function getResend() {
   const key = process.env.RESEND_API_KEY;
@@ -221,7 +222,7 @@ export async function sendShipmentEmail(
         <h2 style="font-size: 20px; color: #C9956C;">Your order is on its way!</h2>
         <div style="background: #fff; border: 1px solid #F5EDE0; border-radius: 12px; padding: 32px; text-align: center; margin: 24px 0;">
           <p style="color: #6B6B6B;">Order #${orderId.slice(-8).toUpperCase()}</p>
-          <p style="color: #6B6B6B; font-size: 14px;">${courierName ? escHtml(courierName.toUpperCase()) + " · " : ""}Tracking ID:</p>
+          <p style="color: #6B6B6B; font-size: 14px;">${courierName ? escHtml(COURIERS.find((c) => c.value === courierName)?.name ?? courierName) + " · " : ""}Tracking ID:</p>
           <div style="font-size: 24px; font-weight: 700; letter-spacing: 4px; color: #C9956C; margin: 12px 0;">${escHtml(trackingId)}</div>
           <p style="font-size: 13px; color: #6B6B6B; margin: 8px 0 0 0;">Use this ID to track your order on the courier's website.</p>
         </div>
