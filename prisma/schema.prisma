@@ -205,12 +205,7 @@ model Order {
   trackingId     String?
   addressId      String
   paymentId      String?
-  razorpayOrderId      String?
-  shiprocketOrderId    String?
-  shiprocketShipmentId String?
-  awbCode              String?
-  courierName          String?
-  pickupLocation       String?
+  razorpayOrderId String?
   paymentStatus  PaymentStatus   @default(PENDING)
   paymentGateway PaymentGateway?
   createdAt      DateTime        @default(now())
