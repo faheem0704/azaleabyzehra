@@ -392,7 +392,7 @@ export async function createOrder(input: CreateOrderInput) {
       return createdOrder;
     },
     { isolationLevel: "Serializable", timeout: 15000 },
-  ) as CreatedOrderResult;
+  ) as unknown as CreatedOrderResult;
 
   // Increment promo usage only after order is saved
   if (promoRecordId) {
