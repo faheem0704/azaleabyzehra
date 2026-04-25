@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import MainLayout from "@/components/layout/MainLayout";
 import HelpPageClient from "@/components/help/HelpPageClient";
 

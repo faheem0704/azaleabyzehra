@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   const headers = parseCSVLine(lines[0]);
   const idx = (name: string) => headers.indexOf(name);
 
-  const categories = await prisma.category.findMany();
+  const categories = await prisma.category.findMany({ select: { id: true, slug: true } });
   const catMap = new Map(categories.map((c) => [c.slug, c.id]));
 
   let created = 0;
