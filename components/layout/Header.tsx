@@ -371,7 +371,7 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                       const q = searchQuery.trim();
                       setSearchQuery("");
                       closeSearch();
-                      router.push(`/products?search=${encodeURIComponent(q)}`);
+                      router.push(`/search?q=${encodeURIComponent(q)}`);
                     }
                     if (e.key === "Escape") { setSearchQuery(""); closeSearch(); }
                   }}
