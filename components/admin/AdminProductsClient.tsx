@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Edit2, Trash2, X, Star, Sparkles, Download, Upload, AlertTriangle, Search } from "lucide-react";
+import { Plus, Edit2, Trash2, X, Star, Sparkles, Download, AlertTriangle, Search } from "lucide-react";
 import { Product, Category, ProductVariant } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { COLOR_FAMILIES } from "@/lib/colorFamilies";
@@ -67,8 +67,6 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
   const [variantStock, setVariantStock] = useState<Record<string, number>>({});
   const [variantSku, setVariantSku] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const [csvImporting, setCsvImporting] = useState(false);
-  const csvInputRef = useRef<HTMLInputElement>(null);
   // Fix 9: save lock ref to prevent double-save race
   const saveLockRef = useRef<boolean>(false);
 
@@ -376,28 +374,6 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
     window.location.href = "/api/admin/csv/export";
   };
 
-  const handleCSVImport = async (file: File | null) => {
-    if (!file) return;
-    setCsvImporting(true);
-    try {
-      const text = await file.text();
-      const res = await fetch("/api/admin/csv/import", {
-        method: "POST",
-        headers: { "Content-Type": "text/csv" },
-        body: text,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      toast.success(`Imported: ${data.created} created, ${data.updated} updated${data.errors.length > 0 ? ` (${data.errors.length} errors)` : ""}`);
-      // BUG-29: use router.refresh() instead of window.location.reload() to stay in Next.js
-      router.refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Import failed");
-    } finally {
-      setCsvImporting(false);
-    }
-  };
-
   const hasActiveFilters = search !== "" || categoryFilter !== "" || statusFilter !== "" || minPrice !== "" || maxPrice !== "" || sortBy !== "newest";
 
   const clearFilters = () => {
@@ -428,7 +404,6 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
           <p className="font-inter text-sm text-charcoal-light mt-1">{filteredTotal} products</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          {/* CSV */}
           <button
             onClick={handleCSVExport}
             className="flex items-center gap-2 px-4 py-2 border border-ivory-200 font-inter text-xs tracking-widest uppercase text-charcoal-light hover:border-charcoal hover:text-charcoal transition-all"
@@ -436,21 +411,6 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
             <Download size={14} />
             Export CSV
           </button>
-          <button
-            onClick={() => csvInputRef.current?.click()}
-            disabled={csvImporting}
-            className="flex items-center gap-2 px-4 py-2 border border-ivory-200 font-inter text-xs tracking-widest uppercase text-charcoal-light hover:border-charcoal hover:text-charcoal transition-all disabled:opacity-40"
-          >
-            <Upload size={14} />
-            {csvImporting ? "Importing…" : "Import CSV"}
-          </button>
-          <input
-            ref={csvInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={(e) => handleCSVImport(e.target.files?.[0] ?? null)}
-          />
           <Button onClick={openCreate}>
             <Plus size={16} className="mr-2" />
             Add Product

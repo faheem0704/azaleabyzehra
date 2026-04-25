@@ -390,20 +390,19 @@ export async function createOrder(input: CreateOrderInput) {
         }
       }
 
+      // Increment promo usage atomically with order creation — prevents concurrent
+      // last-use orders from both succeeding under Serializable isolation
+      if (promoRecordId) {
+        await tx.promoCode.update({
+          where: { id: promoRecordId },
+          data: { usageCount: { increment: 1 } },
+        });
+      }
+
       return createdOrder;
     },
     { isolationLevel: "Serializable", timeout: 15000 },
   ) as unknown as CreatedOrderResult;
-
-  // Increment promo usage only after order is saved
-  if (promoRecordId) {
-    await prisma.promoCode
-      .update({
-        where: { id: promoRecordId },
-        data: { usageCount: { increment: 1 } },
-      })
-      .catch(console.error);
-  }
 
   // Slugs for ISR revalidation (handled by the route layer)
   const uniqueProductIds = Array.from(

@@ -108,6 +108,16 @@ export async function POST(
         where: { id: orderItemId },
         data: { size: newSize.trim(), color: newColor.trim() },
       });
+
+      // Re-sync product.stock inside the transaction so it's atomic with the variant updates
+      const agg = await tx.productVariant.aggregate({
+        where: { productId: item.productId },
+        _sum: { stock: true },
+      });
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: agg._sum.stock ?? 0 },
+      });
     });
   } catch (err) {
     const e = err as Error & { available?: number };
@@ -123,16 +133,6 @@ export async function POST(
     console.error("Exchange transaction error:", err);
     return NextResponse.json({ error: "Failed to exchange item" }, { status: 500 });
   }
-
-  // Re-sync product.stock to sum of all variant stocks
-  const aggregate = await prisma.productVariant.aggregate({
-    where: { productId: item.productId },
-    _sum: { stock: true },
-  });
-  await prisma.product.update({
-    where: { id: item.productId },
-    data: { stock: aggregate._sum.stock ?? 0 },
-  });
 
   return NextResponse.json({ success: true, newSize: newSize.trim(), newColor: newColor.trim() });
 }

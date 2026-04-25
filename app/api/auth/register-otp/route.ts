@@ -71,8 +71,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ message: "Account created successfully" });
-  } catch (error: any) {
-    if (error?.code === "P2002") {
+  } catch (error: unknown) {
+    if ((error as { code?: string })?.code === "P2002") {
       return NextResponse.json({ error: "An account with this contact already exists" }, { status: 409 });
     }
     console.error("Register OTP error:", error);

@@ -35,6 +35,7 @@ export default function CheckoutPageClient() {
 
   const [step, setStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState(false);
   const [address, setAddress] = useState<AddressForm>({
     name: "", phone: "", line1: "", line2: "", city: "", state: "", pincode: "",
   });
@@ -136,7 +137,7 @@ export default function CheckoutPageClient() {
 
   if (sessionStatus === "loading") return null;
 
-  if (items.length === 0) {
+  if (items.length === 0 && !orderPlaced) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -160,6 +161,10 @@ export default function CheckoutPageClient() {
   const handleContinueToPayment = async () => {
     if (!address.name || !address.phone || !address.line1 || !address.city || !address.state || !address.pincode) {
       toast.error("Please fill all required fields");
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(address.phone.replace(/\s/g, ""))) {
+      toast.error("Enter a valid 10-digit Indian mobile number");
       return;
     }
 
@@ -287,7 +292,10 @@ export default function CheckoutPageClient() {
             // can confirm the signature was actually verified server-side.
             await placeOrder(verifyData.paymentId, "RAZORPAY", response.razorpay_order_id, verifyData.paymentToken);
           } catch {
-            toast.error("Payment was received but order creation failed. Please contact support.");
+            toast.error(
+              `Payment received but order creation failed. Payment ID: ${response.razorpay_payment_id} — share this with support.`,
+              { duration: 10000 }
+            );
             setLoading(false);
           }
         },
@@ -334,8 +342,9 @@ export default function CheckoutPageClient() {
       });
       const order = await res.json();
       if (!res.ok) throw new Error(order.error);
+      setOrderPlaced(true);
       clearCart();
-      router.push(`/order-success?id=${order.id}`); // BUG-10: use router.push, not window.location.href
+      router.push(`/order-success?id=${order.id}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to place order");
     } finally {
