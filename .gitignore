@@ -39,3 +39,13 @@ next-env.d.ts
 # prisma generated client
 /src/generated/
 /app/generated/prisma
+
+# ruflo / claude-flow runtime data (don't commit DB files or logs)
+.swarm/
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+agentdb.rvf
+agentdb.rvf.lock
+ruvector.db
+.claude/memory.db
