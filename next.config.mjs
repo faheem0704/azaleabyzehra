@@ -15,6 +15,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com",
       "frame-src https://api.razorpay.com https://checkout.razorpay.com",
       "img-src 'self' https://res.cloudinary.com https://images.unsplash.com https://via.placeholder.com data: blob:",
+      "media-src 'self' https://res.cloudinary.com",
       "connect-src 'self' https://api.razorpay.com",
       "font-src 'self' https://fonts.gstatic.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
