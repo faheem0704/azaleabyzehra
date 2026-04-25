@@ -2,12 +2,15 @@
 
 import { useState, useTransition, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import ProductCard from "@/components/products/ProductCard";
 import FilterSidebar from "@/components/products/FilterSidebar";
-import ProductQuickView from "@/components/products/ProductQuickView";
 import { Product } from "@/types";
-import { motion } from "framer-motion";
 import { SlidersHorizontal } from "lucide-react";
+
+// Lazy — modal never shown on initial render; splitting it removes AnimatePresence
+// from the initial products bundle and defers ~15KB of Framer Motion code.
+const ProductQuickView = dynamic(() => import("@/components/products/ProductQuickView"), { ssr: false });
 
 const DEFAULT_FILTERS = {
   minPrice: "",
@@ -146,21 +149,12 @@ export default function ProductsPageClient({
     <div className="pt-24 lg:pt-32 pb-24">
       {/* Page Header */}
       <div className="section-padding mb-4 lg:mb-10">
-        <motion.p
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="section-subtitle mb-3"
-        >
+        <p className="section-subtitle mb-3">
           {searchQuery ? "Search Results" : "Collections"}
-        </motion.p>
-        <motion.h1
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="font-playfair text-4xl md:text-5xl text-charcoal capitalize"
-        >
+        </p>
+        <h1 className="font-playfair text-4xl md:text-5xl text-charcoal capitalize">
           {searchQuery ? `"${searchQuery}"` : categoryName.replace(/-/g, " ")}
-        </motion.h1>
+        </h1>
 
         {/* Mobile: count + filter trigger in one row */}
         <div className="flex items-center justify-between mt-3 lg:hidden">
