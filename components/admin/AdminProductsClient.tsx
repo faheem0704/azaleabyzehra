@@ -3,12 +3,14 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Edit2, Trash2, X, Upload, Star, Sparkles, Download, ChevronUp, ChevronDown, AlertTriangle, Search } from "lucide-react";
+import { Plus, Edit2, Trash2, X, Star, Sparkles, Download, Upload, AlertTriangle, Search } from "lucide-react";
 import { Product, Category, ProductVariant } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { COLOR_FAMILIES } from "@/lib/colorFamilies";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import VariantStockGrid from "@/components/admin/products/VariantStockGrid";
+import ProductImageManager, { type ImageEntry } from "@/components/admin/products/ProductImageManager";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -24,9 +26,6 @@ const EMPTY_FORM = {
   fabric: "", featured: false, isNewArrival: false, isOnSale: false,
 };
 
-type ImageEntry = { url: string; alt: string; colorTag?: string };
-
-// Build variant map key
 const vkey = (size: string, color: string) => `${size}||${color}`;
 
 const LIMIT = 20;
@@ -67,10 +66,8 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
   const [colorFamilies, setColorFamilies] = useState<string[]>([]);
   const [variantStock, setVariantStock] = useState<Record<string, number>>({});
   const [variantSku, setVariantSku] = useState<Record<string, string>>({});
-  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [csvImporting, setCsvImporting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
   // Fix 9: save lock ref to prevent double-save race
   const saveLockRef = useRef<boolean>(false);
@@ -256,43 +253,6 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
     setVariantStock(stock);
     setVariantSku(sku);
     setIsModalOpen(true);
-  };
-
-  const handleUpload = async (files: FileList | null) => {
-    if (!files) return;
-    setUploading(true);
-    const uploaded: ImageEntry[] = [];
-    try {
-      for (const file of Array.from(files)) {
-        const fd = new FormData();
-        fd.append("file", file);
-        const res = await fetch("/api/upload", { method: "POST", body: fd });
-        const data = await res.json();
-        if (data.url) uploaded.push({ url: data.url, alt: "" });
-      }
-      setImages((prev) => [...prev, ...uploaded]);
-      toast.success(`${uploaded.length} image(s) uploaded`);
-    } finally {
-      // Fix 4: always reset file input so the same file can be re-uploaded
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      setUploading(false);
-    }
-  };
-
-  const moveImage = (i: number, dir: -1 | 1) => {
-    const j = i + dir;
-    if (j < 0 || j >= images.length) return;
-    const next = [...images];
-    [next[i], next[j]] = [next[j], next[i]];
-    setImages(next);
-  };
-
-  const updateImageAlt = (i: number, alt: string) => {
-    setImages((prev) => prev.map((img, idx) => idx === i ? { ...img, alt } : img));
-  };
-
-  const updateImageColor = (i: number, colorTag: string) => {
-    setImages((prev) => prev.map((img, idx) => idx === i ? { ...img, colorTag } : img));
   };
 
   const handleSave = async () => {
@@ -786,55 +746,14 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
 
                   {/* Variant Stock Grid */}
                   {parsedSizes.length > 0 && parsedColors.length > 0 && (
-                    <div>
-                      <label className="block text-xs font-inter tracking-widest uppercase text-charcoal-light mb-3">
-                        Stock per Variant
-                      </label>
-                      <div className="border border-ivory-200 overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="bg-ivory-200/50">
-                              <th className="px-3 py-2 text-left font-inter text-xs text-charcoal-light font-normal">Size / Color</th>
-                              {parsedColors.map((c) => (
-                                <th key={c} className="px-3 py-2 text-center font-inter text-xs text-charcoal font-medium min-w-[80px]">{c}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-ivory-200">
-                            {parsedSizes.map((s) => (
-                              <tr key={s} className="hover:bg-ivory-200/20">
-                                <td className="px-3 py-2 font-inter text-xs font-medium text-charcoal">{s}</td>
-                                {parsedColors.map((c) => {
-                                  const k = vkey(s, c);
-                                  return (
-                                    <td key={c} className="px-2 py-1.5">
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        value={variantStock[k] ?? 0}
-                                        onChange={(e) => setVariantStock(prev => ({ ...prev, [k]: Math.max(0, parseInt(e.target.value) || 0) }))}
-                                        className="w-full border border-ivory-200 px-2 py-1.5 text-center text-sm font-inter focus:outline-none focus:border-rose-gold"
-                                      />
-                                      <input
-                                        type="text"
-                                        value={variantSku[k] ?? ""}
-                                        onChange={(e) => setVariantSku(prev => ({ ...prev, [k]: e.target.value.toUpperCase() }))}
-                                        placeholder="SKU"
-                                        title="Stock Keeping Unit — must be globally unique"
-                                        className="w-full mt-1 border border-ivory-200 px-2 py-1 text-center text-[11px] font-inter focus:outline-none focus:border-rose-gold text-charcoal-light placeholder:text-ivory-200 tracking-wider"
-                                      />
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      <p className="font-inter text-xs text-mauve mt-2">
-                        Total stock: {parsedSizes.flatMap(s => parsedColors.map(c => variantStock[vkey(s, c)] ?? 0)).reduce((a, b) => a + b, 0)} units
-                      </p>
-                    </div>
+                    <VariantStockGrid
+                      sizes={parsedSizes}
+                      colors={parsedColors}
+                      variantStock={variantStock}
+                      variantSku={variantSku}
+                      onStockChange={(k, v) => setVariantStock((prev) => ({ ...prev, [k]: v }))}
+                      onSkuChange={(k, v) => setVariantSku((prev) => ({ ...prev, [k]: v }))}
+                    />
                   )}
 
                   <div className="flex gap-6 flex-wrap">
@@ -855,66 +774,11 @@ export default function AdminProductsClient({ initialProducts, categories, lowSt
 
                 {/* Right — Images with reordering + alt text */}
                 <div>
-                  <label className="block text-xs font-inter tracking-widest uppercase text-charcoal-light mb-4">Product Images</label>
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-ivory-200 p-8 text-center cursor-pointer hover:border-rose-gold transition-colors mb-4"
-                  >
-                    <Upload size={24} className="mx-auto text-mauve mb-2" />
-                    <p className="font-inter text-sm text-charcoal-light">Click to upload images</p>
-                    <p className="font-inter text-xs text-mauve mt-1">JPG, PNG, WebP — First image is thumbnail</p>
-                  </div>
-                  <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={(e) => handleUpload(e.target.files)} />
-                  {uploading && <p className="text-sm font-inter text-rose-gold mb-3">Uploading…</p>}
-
-                  <div className="space-y-3">
-                    {images.map((img, i) => (
-                      <div key={img.url} className="flex gap-3 border border-ivory-200 p-3">
-                        {/* Thumbnail */}
-                        <div className="relative w-16 h-20 flex-shrink-0 bg-ivory-200 overflow-hidden">
-                          <img src={img.url} alt={img.alt || ""} className="w-full h-full object-cover" />
-                          {i === 0 && <span className="absolute bottom-0 left-0 right-0 bg-rose-gold text-white text-[9px] font-inter text-center py-0.5">Thumbnail</span>}
-                        </div>
-                        {/* Alt text + controls */}
-                        <div className="flex-1 min-w-0">
-                          <input
-                            type="text"
-                            value={img.alt}
-                            onChange={(e) => updateImageAlt(i, e.target.value)}
-                            placeholder="Alt text (for SEO & accessibility)"
-                            className="w-full border border-ivory-200 px-2 py-1.5 text-xs font-inter focus:outline-none focus:border-rose-gold"
-                          />
-                          {parsedColors.length > 0 && (
-                            <select
-                              value={img.colorTag ?? ""}
-                              onChange={(e) => updateImageColor(i, e.target.value)}
-                              className="w-full mt-1.5 border border-ivory-200 px-2 py-1.5 text-xs font-inter focus:outline-none focus:border-rose-gold bg-white text-charcoal"
-                            >
-                              <option value="">All colors</option>
-                              {parsedColors.map((c) => (
-                                <option key={c} value={c}>{c}</option>
-                              ))}
-                            </select>
-                          )}
-                        </div>
-                        {/* Order + remove buttons */}
-                        <div className="flex flex-col gap-1 flex-shrink-0">
-                          <button onClick={() => moveImage(i, -1)} disabled={i === 0} className="w-6 h-6 flex items-center justify-center text-mauve hover:text-charcoal disabled:opacity-20">
-                            <ChevronUp size={14} />
-                          </button>
-                          <button onClick={() => moveImage(i, 1)} disabled={i === images.length - 1} className="w-6 h-6 flex items-center justify-center text-mauve hover:text-charcoal disabled:opacity-20">
-                            <ChevronDown size={14} />
-                          </button>
-                          <button onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))} className="w-6 h-6 flex items-center justify-center text-mauve hover:text-red-500">
-                            <X size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    {images.length === 0 && (
-                      <p className="font-inter text-xs text-mauve text-center py-4">No images yet</p>
-                    )}
-                  </div>
+                  <ProductImageManager
+                    images={images}
+                    setImages={setImages}
+                    parsedColors={parsedColors}
+                  />
                 </div>
               </div>
 
