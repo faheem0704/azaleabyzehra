@@ -265,13 +265,6 @@ model Settings {
   contactEmail          String         @default("hello@azaleabyzehra.com")
   whatsappNumber        String         @default("+91-900-000-0000")
   paymentGateway        PaymentGateway @default(RAZORPAY)
-  razorpayKeyId         String?
-  razorpaySecret        String?
-  stripeSecretKey       String?
-  resendApiKey          String?
-  twilioSid             String?
-  twilioToken           String?
-  twilioPhone           String?
   shippingFee           Int            @default(199)
   freeShippingThreshold Int            @default(2999)
   lowStockThreshold     Int            @default(5)

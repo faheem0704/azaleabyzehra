@@ -36,8 +36,16 @@ export async function PUT(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { items } = await req.json() as {
-    items: { productId: string; quantity: number; size: string; color: string; price: number }[];
+    items: { productId: string; quantity: number; size: string; color: string }[];
   };
+
+  // Re-fetch prices from DB — never trust client-sent prices
+  const productIds = Array.from(new Set(items.map((i) => i.productId)));
+  const dbProducts = await prisma.product.findMany({
+    where: { id: { in: productIds }, isDeleted: false },
+    select: { id: true, price: true },
+  });
+  const priceMap = new Map(dbProducts.map((p) => [p.id, p.price]));
 
   const cart = await prisma.cart.upsert({
     where: { userId: session.user.id },
@@ -47,15 +55,16 @@ export async function PUT(req: NextRequest) {
 
   await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
 
-  if (items.length > 0) {
+  const validItems = items.filter((i) => priceMap.has(i.productId));
+  if (validItems.length > 0) {
     await prisma.cartItem.createMany({
-      data: items.map((i) => ({
+      data: validItems.map((i) => ({
         cartId: cart.id,
         productId: i.productId,
         quantity: i.quantity,
         size: i.size,
         color: i.color,
-        price: i.price ?? 0, // BUG-17: persist price so it isn't lost on cart reload
+        price: priceMap.get(i.productId)!,
       })),
       skipDuplicates: true,
     });

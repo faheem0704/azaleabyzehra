@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { sendOrderConfirmationEmail, sendNewOrderAlert } from "@/lib/resend";
 import { sendOrderConfirmationSMS } from "@/lib/twilio";
-import { verifyPaymentToken } from "@/app/api/payment/verify/route";
+import { verifyPaymentToken } from "@/lib/paymentToken";
 
 export async function GET(req: NextRequest) {
   const session = await auth();

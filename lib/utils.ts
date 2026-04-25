@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import crypto from "crypto";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -10,7 +11,12 @@ export function formatPrice(amount: number): string {
 }
 
 export function generateOTP(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
+}
+
+export function hashOTP(otp: string): string {
+  const secret = process.env.NEXTAUTH_SECRET ?? "dev-otp-secret";
+  return crypto.createHmac("sha256", secret).update(otp).digest("hex");
 }
 
 export function slugify(text: string): string {

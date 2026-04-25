@@ -16,7 +16,13 @@ export async function POST(req: NextRequest) {
   const signature = req.headers.get("x-razorpay-signature") ?? "";
   const expected = crypto.createHmac("sha256", secret).update(body).digest("hex");
 
-  if (signature !== expected) {
+  const sigBuf = Buffer.from(signature.padEnd(64, "0"), "hex");
+  const expBuf = Buffer.from(expected, "hex");
+  const valid =
+    signature.length === expected.length &&
+    sigBuf.length === expBuf.length &&
+    crypto.timingSafeEqual(sigBuf, expBuf);
+  if (!valid) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 

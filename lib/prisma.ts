@@ -8,8 +8,8 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
-  const connectionString =
-    process.env.DATABASE_URL || "postgresql://localhost:5432/azalea_by_zehra";
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) throw new Error("DATABASE_URL environment variable is required");
 
   // On Vercel each serverless function instance gets its own pool.
   // Keeping max low prevents exhausting the cloud DB's connection limit.

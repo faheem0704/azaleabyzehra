@@ -3,13 +3,14 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { hashOTP } from "@/lib/utils";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [GoogleProvider({ clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET })]
+      : []),
     CredentialsProvider({
       id: "password-credentials",
       name: "Password",
@@ -24,6 +25,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const password = credentials.password as string;
         const isEmail = rawContact.includes("@");
         const contact = isEmail ? rawContact.toLowerCase() : rawContact;
+
+        // Rate-limit: 5 failed attempts per contact per 15 minutes
+        if (!checkRateLimit(`login:${contact}`, 5, 15 * 60 * 1000)) return null;
 
         const user = await prisma.user.findFirst({
           where: isEmail ? { email: contact } : { phone: contact },
@@ -54,7 +58,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const otpRecord = await prisma.oTPRecord.findFirst({
           where: {
             contact,
-            otp,
+            otp: hashOTP(otp),
             used: false,
             expiresAt: { gt: new Date() },
           },
@@ -91,9 +95,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const existing = await prisma.user.findUnique({
           where: { email: email.toLowerCase() },
+          select: { id: true, passwordHash: true, role: true },
         });
 
-        if (!existing) {
+        if (existing) {
+          // Block Google sign-in for accounts created with a password — prevents account takeover
+          if (existing.passwordHash) return false;
+          // Never allow Google sign-in for admin accounts
+          if (existing.role === "ADMIN") return false;
+        } else {
           await prisma.user.create({
             data: {
               name: (profile?.name as string | undefined) ?? "Google User",

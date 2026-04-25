@@ -6,7 +6,10 @@ import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip =
+      req.headers.get("x-real-ip") ??
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      "unknown";
     // Max 10 promo attempts per IP per minute
     if (!checkRateLimit(`promo:${ip}`, 10, 60 * 1000)) {
       return NextResponse.json({ error: "Too many requests. Please wait a moment." }, { status: 429 });

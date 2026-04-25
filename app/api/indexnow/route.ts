@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const INDEXNOW_KEY = "774f6303b43edc263f11ac7e4458f729";
+const INDEXNOW_KEY = process.env.INDEXNOW_KEY ?? "";
 const BASE_URL = "https://azaleabyzehra.com";
 
 // GET /api/indexnow — admin triggers this to ping Bing/IndexNow with all product URLs
@@ -10,6 +10,10 @@ export async function GET(req: NextRequest) {
   const session = await auth();
   if ((session?.user as { role?: string })?.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!INDEXNOW_KEY) {
+    return NextResponse.json({ error: "INDEXNOW_KEY not configured" }, { status: 500 });
   }
 
   const products = await prisma.product.findMany({

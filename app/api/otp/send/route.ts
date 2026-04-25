@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendOTPEmail } from "@/lib/resend";
-import { generateOTP } from "@/lib/utils";
+import { generateOTP, hashOTP } from "@/lib/utils";
 import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest) {
@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
     }
 
     const otp = generateOTP();
+    const otpHash = hashOTP(otp);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Invalidate old OTPs for this contact
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
     });
 
     await prisma.oTPRecord.create({
-      data: { contact, otp, expiresAt },
+      data: { contact, otp: otpHash, expiresAt },
     });
 
     await sendOTPEmail(contact, otp);

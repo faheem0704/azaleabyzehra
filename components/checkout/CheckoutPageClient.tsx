@@ -270,10 +270,10 @@ export default function CheckoutPageClient() {
         const { error } = await orderRes.json();
         throw new Error(error || "Failed to create payment order");
       }
-      const { orderId, amount: serverAmount, keyId } = await orderRes.json();
+      const { orderId, amount: serverAmount } = await orderRes.json();
 
       const options = {
-        key: keyId,
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: Math.round(serverAmount * 100), // paise — server-calculated
         currency: "INR",
         name: "Azalea by Zehra",
