@@ -1,0 +1,23 @@
+name: Cache Warmup
+
+# Runs after every push to master — gives Vercel ~90s to deploy, then
+# hits /api/cache-warmup so the 4 top product page combos are pre-cached
+# before the first real visitor arrives.
+on:
+  push:
+    branches: [master]
+
+jobs:
+  warmup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Vercel deployment to go live
+        run: sleep 90
+
+      - name: Warm product page cache
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://azaleabyzehra.com/api/cache-warmup)
+          echo "Warmup response: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Warmup returned $STATUS — may need more time. Not failing the job."
+          fi
