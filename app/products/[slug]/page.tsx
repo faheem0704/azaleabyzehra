@@ -161,7 +161,7 @@ export default async function ProductDetailPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/<\//g, "<\\/") }}
       />
-      <ProductDetailClient product={product as any} related={related as any} />
+      <ProductDetailClient product={JSON.parse(JSON.stringify(product))} related={JSON.parse(JSON.stringify(related))} />
     </MainLayout>
   );
 }

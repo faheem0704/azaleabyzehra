@@ -40,5 +40,5 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
     }),
   ]);
 
-  return <AdminOrdersClient orders={orders as any} totalCount={totalCount} currentPage={currentPage} pageSize={PAGE_SIZE} />;
+  return <AdminOrdersClient orders={JSON.parse(JSON.stringify(orders))} totalCount={totalCount} currentPage={currentPage} pageSize={PAGE_SIZE} />;
 }

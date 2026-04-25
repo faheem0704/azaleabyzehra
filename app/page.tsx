@@ -1,6 +1,7 @@
 export const revalidate = 300; // ISR: refresh every 5 min — product/category data is stable
 
 import { unstable_cache } from "next/cache";
+import dynamic from "next/dynamic";
 import { prisma } from "@/lib/prisma";
 import MainLayout from "@/components/layout/MainLayout";
 import Hero from "@/components/home/Hero";
@@ -10,6 +11,8 @@ import BrandStory from "@/components/home/BrandStory";
 import Testimonials from "@/components/home/Testimonials";
 import LookbookGrid from "@/components/home/LookbookGrid";
 import Newsletter from "@/components/home/Newsletter";
+
+const SmoothScroll = dynamic(() => import("@/components/layout/SmoothScroll"), { ssr: false });
 
 const getHomeData = unstable_cache(
   async () => {
@@ -64,7 +67,9 @@ export default async function HomePage() {
   const { categories, newArrivals, featuredProducts } = await getHomeData();
 
   return (
-    <MainLayout>
+    <>
+      <SmoothScroll />
+      <MainLayout>
       <Hero />
       <FeaturedCategories categories={categories} />
       <NewArrivalsStrip products={newArrivals} />
@@ -73,5 +78,6 @@ export default async function HomePage() {
       <Testimonials />
       <Newsletter />
     </MainLayout>
+    </>
   );
 }

@@ -16,6 +16,10 @@ export async function POST(req: NextRequest) {
 
     const isEmail = (rawContact as string).includes("@");
 
+    if (isEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawContact as string)) {
+      return NextResponse.json({ error: "Invalid email format" }, { status: 400 });
+    }
+
     // SMS is not available — phone users must use email for OTP verification
     if (!isEmail) {
       return NextResponse.json(

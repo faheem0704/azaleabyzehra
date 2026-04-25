@@ -30,5 +30,5 @@ export default async function AdminProductsPage() {
 
   const lowStockThreshold = settings?.lowStockThreshold ?? 5;
 
-  return <AdminProductsClient initialProducts={initialProducts as any} categories={categories} lowStockThreshold={lowStockThreshold} totalCount={totalCount} />;
+  return <AdminProductsClient initialProducts={JSON.parse(JSON.stringify(initialProducts))} categories={categories} lowStockThreshold={lowStockThreshold} totalCount={totalCount} />;
 }

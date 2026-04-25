@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ShoppingBag, Heart, Search, Menu, X, ChevronDown, User, LogOut, Package, Settings, LayoutDashboard } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import { useWishlistStore } from "@/store/wishlistStore";
@@ -90,7 +90,7 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <Link href="/" className="flex-shrink-0 flex items-center">
-              <motion.div whileHover={{ scale: 1.02 }} className="flex items-center gap-2">
+              <div className="flex items-center gap-2 transition-transform duration-200 hover:scale-[1.02]">
                 <Image
                   src="https://res.cloudinary.com/dtwjd2xuy/image/upload/v1776884511/AZALEA-02_finL_mlayf5.png"
                   alt="Azalea by Zehra logo"
@@ -103,7 +103,7 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                 <span className="hidden sm:inline font-playfair text-2xl text-charcoal tracking-wide">
                   Azalea <span className="text-rose-gold">by Zehra</span>
                 </span>
-              </motion.div>
+              </div>
             </Link>
 
             {/* Desktop Nav */}
@@ -122,57 +122,49 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                   />
                 </button>
 
-                <AnimatePresence>
-                  {hoveredCategory === "products" && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 8 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute top-full left-1/2 -translate-x-1/2 pt-4 w-[480px]"
-                    >
-                      <div className="bg-ivory border border-ivory-200 shadow-xl p-6 grid grid-cols-2 gap-6">
-                        <div>
-                          <p className="section-subtitle text-xs mb-4">Collections</p>
-                          <ul className="space-y-2">
-                            {categories.filter((c) => !c.parentId).map((cat) => (
-                              <li key={cat.id}>
-                                <Link
-                                  href={`/products?category=${cat.slug}`}
-                                  className="font-inter text-sm text-charcoal hover:text-rose-gold transition-colors duration-200 link-hover"
-                                >
-                                  {cat.name}
-                                </Link>
-                                {cat.children && cat.children.length > 0 && (
-                                  <ul className="ml-3 mt-1 space-y-1">
-                                    {cat.children.map((child) => (
-                                      <li key={child.id}>
-                                        <Link
-                                          href={`/products?category=${child.slug}`}
-                                          className="font-inter text-xs text-charcoal-light hover:text-rose-gold transition-colors duration-200"
-                                        >
-                                          {child.name}
-                                        </Link>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div className="border-l border-ivory-200 pl-6">
-                          <p className="section-subtitle text-xs mb-4">Quick Links</p>
-                          <ul className="space-y-2">
-                            <li><Link href="/products?featured=true" className="font-inter text-sm text-charcoal hover:text-rose-gold transition-colors">Influencers Collection</Link></li>
-                            <li><Link href="/new-arrivals" className="font-inter text-sm text-charcoal hover:text-rose-gold transition-colors">New Arrivals</Link></li>
-                            <li><Link href="/products?sort=popular" className="font-inter text-sm text-charcoal hover:text-rose-gold transition-colors">Best Sellers</Link></li>
-                          </ul>
-                        </div>
+                {hoveredCategory === "products" && (
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 pt-4 w-[480px] animate-fade-in">
+                    <div className="bg-ivory border border-ivory-200 shadow-xl p-6 grid grid-cols-2 gap-6">
+                      <div>
+                        <p className="section-subtitle text-xs mb-4">Collections</p>
+                        <ul className="space-y-2">
+                          {categories.filter((c) => !c.parentId).map((cat) => (
+                            <li key={cat.id}>
+                              <Link
+                                href={`/products?category=${cat.slug}`}
+                                className="font-inter text-sm text-charcoal hover:text-rose-gold transition-colors duration-200 link-hover"
+                              >
+                                {cat.name}
+                              </Link>
+                              {cat.children && cat.children.length > 0 && (
+                                <ul className="ml-3 mt-1 space-y-1">
+                                  {cat.children.map((child) => (
+                                    <li key={child.id}>
+                                      <Link
+                                        href={`/products?category=${child.slug}`}
+                                        className="font-inter text-xs text-charcoal-light hover:text-rose-gold transition-colors duration-200"
+                                      >
+                                        {child.name}
+                                      </Link>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      <div className="border-l border-ivory-200 pl-6">
+                        <p className="section-subtitle text-xs mb-4">Quick Links</p>
+                        <ul className="space-y-2">
+                          <li><Link href="/products?featured=true" className="font-inter text-sm text-charcoal hover:text-rose-gold transition-colors">Influencers Collection</Link></li>
+                          <li><Link href="/new-arrivals" className="font-inter text-sm text-charcoal hover:text-rose-gold transition-colors">New Arrivals</Link></li>
+                          <li><Link href="/products?sort=popular" className="font-inter text-sm text-charcoal hover:text-rose-gold transition-colors">Best Sellers</Link></li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {navLinks.map((link) => (
@@ -194,29 +186,23 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
             {/* Right Actions */}
             <div className="flex items-center gap-2.5 lg:gap-4">
               {/* Search */}
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
+              <button
                 onClick={openSearch}
-                className="text-charcoal hover:text-rose-gold transition-colors duration-200"
+                className="text-charcoal hover:text-rose-gold hover:scale-110 active:scale-90 transition-all duration-200"
               >
                 <Search size={20} />
-              </motion.button>
+              </button>
 
               {/* Wishlist */}
               <Link href="/wishlist" className="relative text-charcoal hover:text-rose-gold transition-colors duration-200">
-                <motion.div whileHover={{ scale: 1.1 }}>
+                <div className="hover:scale-110 transition-transform duration-200">
                   <Heart size={20} />
                   {wishlistCount > 0 && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="absolute -top-2 -right-2 h-4 w-4 bg-rose-gold text-white text-[10px] font-inter font-bold rounded-full flex items-center justify-center"
-                    >
+                    <span className="absolute -top-2 -right-2 h-4 w-4 bg-rose-gold text-white text-[10px] font-inter font-bold rounded-full flex items-center justify-center">
                       {wishlistCount}
-                    </motion.span>
+                    </span>
                   )}
-                </motion.div>
+                </div>
               </Link>
 
               {/* Cart */}
@@ -224,39 +210,28 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                 onClick={openCart}
                 className="relative text-charcoal hover:text-rose-gold transition-colors duration-200"
               >
-                <motion.div whileHover={{ scale: 1.1 }}>
+                <div className="hover:scale-110 transition-transform duration-200">
                   <ShoppingBag size={20} />
                   {cartCount > 0 && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="absolute -top-2 -right-2 h-4 w-4 bg-rose-gold text-white text-[10px] font-inter font-bold rounded-full flex items-center justify-center"
-                    >
+                    <span className="absolute -top-2 -right-2 h-4 w-4 bg-rose-gold text-white text-[10px] font-inter font-bold rounded-full flex items-center justify-center">
                       {cartCount}
-                    </motion.span>
+                    </span>
                   )}
-                </motion.div>
+                </div>
               </button>
 
               {/* Account */}
               <div ref={accountRef} className="relative hidden lg:block">
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
+                <button
                   onClick={() => setIsAccountOpen(!isAccountOpen)}
-                  className="text-charcoal hover:text-rose-gold transition-colors duration-200"
+                  className="text-charcoal hover:text-rose-gold hover:scale-110 transition-all duration-200"
                 >
                   <User size={20} />
-                </motion.button>
+                </button>
 
-                <AnimatePresence>
-                  {isAccountOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 8 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute right-0 top-full mt-2 w-48 bg-ivory border border-ivory-200 shadow-lg py-2"
-                    >
+                {isAccountOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-ivory border border-ivory-200 shadow-lg py-2 animate-fade-in">
+
                       {session ? (
                         <>
                           <div className="px-4 py-2 border-b border-ivory-200">
@@ -325,9 +300,8 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                           </Link>
                         </>
                       )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                  </div>
+                )}
               </div>
 
               {/* Mobile Hamburger */}
@@ -343,49 +317,42 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
       </header>
 
       {/* Search Overlay */}
-      <AnimatePresence>
-        {isSearchOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] bg-ivory/98 backdrop-blur-md flex flex-col items-center justify-center"
+      {isSearchOpen && (
+        <div className="fixed inset-0 z-[60] bg-ivory/98 backdrop-blur-md flex flex-col items-center justify-center animate-fade-in">
+          <button
+            onClick={() => { setSearchQuery(""); closeSearch(); }}
+            className="absolute top-6 right-6 text-charcoal hover:text-rose-gold transition-colors"
           >
-            <button
-              onClick={() => { setSearchQuery(""); closeSearch(); }}
-              className="absolute top-6 right-6 text-charcoal hover:text-rose-gold transition-colors"
-            >
-              <X size={24} />
-            </button>
-            <div className="w-full max-w-2xl px-6">
-              <p className="section-subtitle text-center mb-8">Search</p>
-              <div className="flex items-center border-b-2 border-charcoal pb-4">
-                <Search size={20} className="text-mauve mr-4 flex-shrink-0" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && searchQuery.trim()) {
-                      const q = searchQuery.trim();
-                      setSearchQuery("");
-                      closeSearch();
-                      router.push(`/search?q=${encodeURIComponent(q)}`);
-                    }
-                    if (e.key === "Escape") { setSearchQuery(""); closeSearch(); }
-                  }}
-                  placeholder="Search kurtis, sets, dupattas…"
-                  className="flex-1 bg-transparent text-2xl font-playfair text-charcoal placeholder-mauve focus:outline-none"
-                />
-              </div>
-              <p className="mt-4 text-center text-xs font-inter text-mauve tracking-widest">
-                Press Enter to search · Esc to close
-              </p>
+            <X size={24} />
+          </button>
+          <div className="w-full max-w-2xl px-6">
+            <p className="section-subtitle text-center mb-8">Search</p>
+            <div className="flex items-center border-b-2 border-charcoal pb-4">
+              <Search size={20} className="text-mauve mr-4 flex-shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && searchQuery.trim()) {
+                    const q = searchQuery.trim();
+                    setSearchQuery("");
+                    closeSearch();
+                    router.push(`/search?q=${encodeURIComponent(q)}`);
+                  }
+                  if (e.key === "Escape") { setSearchQuery(""); closeSearch(); }
+                }}
+                placeholder="Search kurtis, sets, dupattas…"
+                className="flex-1 bg-transparent text-2xl font-playfair text-charcoal placeholder-mauve focus:outline-none"
+              />
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <p className="mt-4 text-center text-xs font-inter text-mauve tracking-widest">
+              Press Enter to search · Esc to close
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Menu */}
       <AnimatePresence>
@@ -420,14 +387,9 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
 
               {/* SHOP */}
               <p className="section-subtitle text-xs mb-3">Shop</p>
-              <motion.ul className="space-y-1">
-                {staticShopLinks.map((item, i) => (
-                  <motion.li
-                    key={item.href}
-                    initial={{ opacity: 0, x: 24 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                  >
+              <ul className="space-y-1">
+                {staticShopLinks.map((item) => (
+                  <li key={item.href}>
                     <Link
                       href={item.href}
                       onClick={closeMobileMenu}
@@ -440,15 +402,10 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                     >
                       {item.label}
                     </Link>
-                  </motion.li>
+                  </li>
                 ))}
-                {categories.filter((c) => !c.parentId).map((cat, i) => (
-                  <motion.li
-                    key={cat.id}
-                    initial={{ opacity: 0, x: 24 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: (staticShopLinks.length + i) * 0.05 }}
-                  >
+                {categories.filter((c) => !c.parentId).map((cat) => (
+                  <li key={cat.id}>
                     <Link
                       href={`/products?category=${cat.slug}`}
                       onClick={closeMobileMenu}
@@ -471,9 +428,9 @@ export default function Header({ categories, salePageActive }: HeaderProps) {
                         ))}
                       </ul>
                     )}
-                  </motion.li>
+                  </li>
                 ))}
-              </motion.ul>
+              </ul>
 
               {/* ACCOUNT */}
               <div className="mt-8 pt-6 border-t border-ivory-200">

@@ -309,6 +309,11 @@ export async function createOrder(input: CreateOrderInput) {
         throw new OrderError("OUT_OF_STOCK", 409, stockErrors);
       }
 
+      const VALID_GATEWAYS = ["RAZORPAY", "STRIPE"];
+      if (paymentGateway && !VALID_GATEWAYS.includes(paymentGateway)) {
+        throw new OrderError(`Invalid payment gateway: ${paymentGateway}`, 400);
+      }
+
       const createdOrder = await tx.order.create({
         data: {
           userId,
@@ -320,7 +325,7 @@ export async function createOrder(input: CreateOrderInput) {
           paymentId: paymentId || null,
           razorpayOrderId: razorpayOrderId || null,
           paymentStatus: paymentId ? "PAID" : "PENDING",
-          paymentGateway: (paymentGateway || null) as any,
+          paymentGateway: paymentGateway || null,
           items: {
             create: authorizedItems.map((item) => ({
               productId: item.productId,

@@ -16,7 +16,7 @@ jobs:
 
       - name: Warm product page cache
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://azaleabyzehra.com/api/cache-warmup)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" https://azaleabyzehra.com/api/cache-warmup)
           echo "Warmup response: $STATUS"
           if [ "$STATUS" != "200" ]; then
             echo "Warmup returned $STATUS — may need more time. Not failing the job."

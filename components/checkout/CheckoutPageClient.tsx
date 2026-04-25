@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -55,6 +55,7 @@ export default function CheckoutPageClient() {
 
   // Price gate — confirmed fresh prices before allowing step 2
   const [priceCheckLoading, setPriceCheckLoading] = useState(false);
+  const refreshingRef = useRef(false);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -87,39 +88,50 @@ export default function CheckoutPageClient() {
       .catch(() => {});
   }, []);
 
+  // Shared price-refresh logic. The refreshingRef guard ensures that if both
+  // the mount effect and handleContinueToPayment trigger this concurrently,
+  // only the first call runs — preventing a stale setItems from overwriting a
+  // fresher one. Returns true when prices were stale (caller should not advance).
+  const refreshPrices = async (): Promise<boolean> => {
+    if (refreshingRef.current) return false;
+    if (items.length === 0) return false;
+    refreshingRef.current = true;
+    try {
+      const ids = Array.from(new Set(items.map((i) => i.productId)));
+      const res = await fetch(`/api/products/batch?ids=${ids.join(",")}`);
+      if (!res.ok) return false;
+      const products: { id: string; price: number }[] = await res.json();
+      const priceMap = new Map(products.map((p) => [p.id, p.price]));
+      const refreshed = items.map((item) => {
+        const fresh = priceMap.get(item.productId);
+        return fresh !== undefined && fresh !== item.price ? { ...item, price: fresh } : item;
+      });
+      const pricesChanged = refreshed.some((r, idx) => r.price !== items[idx].price);
+      if (!pricesChanged) return false;
+      const hadPromo = !!appliedPromo;
+      setItems(refreshed); // also revalidates promo via revalidatePromo inside setItems
+      if (hadPromo) {
+        Promise.resolve().then(() => {
+          if (!useCartStore.getState().appliedPromo) {
+            toast.error("Promo code removed — subtotal no longer meets the minimum requirement.");
+          }
+        });
+      }
+      return true;
+    } catch {
+      return false; // silent fail — server validates prices at order creation anyway
+    } finally {
+      refreshingRef.current = false;
+    }
+  };
+
   // On mount: refresh all cart item prices from the server so the checkout total
   // is always accurate. If a price changed, update the cart store (which also
   // re-validates the promo via setItems → revalidatePromo).
   useEffect(() => {
-    if (items.length === 0) return;
-    const ids = Array.from(new Set(items.map((i) => i.productId)));
-    fetch(`/api/products/batch?ids=${ids.join(",")}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((products: { id: string; price: number }[] | null) => {
-        if (!products) return;
-        const priceMap = new Map(products.map((p) => [p.id, p.price]));
-        const refreshed = items.map((item) => {
-          const fresh = priceMap.get(item.productId);
-          return fresh !== undefined && fresh !== item.price ? { ...item, price: fresh } : item;
-        });
-        const pricesChanged = refreshed.some((r, idx) => r.price !== items[idx].price);
-        if (!pricesChanged) return;
-        const hadPromo = !!appliedPromo;
-        setItems(refreshed); // also revalidates promo via revalidatePromo inside setItems
-        toast("Prices have been updated to reflect current rates.", { icon: "ℹ️" });
-        // After setItems runs, check if the store cleared the promo
-        // We do this by comparing — if promo was active and subtotal now below minimum, it'll be gone
-        if (hadPromo) {
-          // Use a microtask so the store state has settled
-          Promise.resolve().then(() => {
-            const updatedPromo = useCartStore.getState().appliedPromo;
-            if (!updatedPromo) {
-              toast.error("Promo code removed — subtotal no longer meets the minimum requirement.");
-            }
-          });
-        }
-      })
-      .catch(() => {}); // silent fail — server validates prices at order creation anyway
+    refreshPrices().then((changed) => {
+      if (changed) toast("Prices have been updated to reflect current rates.", { icon: "ℹ️" });
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (sessionStatus === "loading") return null;
@@ -153,42 +165,13 @@ export default function CheckoutPageClient() {
 
     setPriceCheckLoading(true);
     try {
-      const ids = Array.from(new Set(items.map((i) => i.productId)));
-      const res = await fetch(`/api/products/batch?ids=${ids.join(",")}`);
-      if (!res.ok) {
-        // API unavailable — proceed; server validates at order creation
-        setStep(2);
-        return;
-      }
-      const products: { id: string; price: number }[] = await res.json();
-      const priceMap = new Map(products.map((p) => [p.id, p.price]));
-
-      const refreshed = items.map((item) => {
-        const fresh = priceMap.get(item.productId);
-        return fresh !== undefined && fresh !== item.price ? { ...item, price: fresh } : item;
-      });
-
-      const pricesChanged = refreshed.some((r, idx) => r.price !== items[idx].price);
-
+      const pricesChanged = await refreshPrices();
       if (pricesChanged) {
-        const hadPromo = !!appliedPromo;
-        setItems(refreshed); // revalidates promo automatically via revalidatePromo
         toast.error("Product prices have been updated. Please review your order total before proceeding.");
-        if (hadPromo) {
-          Promise.resolve().then(() => {
-            if (!useCartStore.getState().appliedPromo) {
-              toast.error("Your promo code has been removed — subtotal no longer meets the minimum requirement.");
-            }
-          });
-        }
         // Do NOT advance — customer must see and acknowledge the updated total
         return;
       }
-
       // All prices confirmed current — safe to proceed to payment
-      setStep(2);
-    } catch {
-      // Network error — proceed; server is the final price authority
       setStep(2);
     } finally {
       setPriceCheckLoading(false);

@@ -9,6 +9,9 @@ import { createOrder, OrderError } from "@/lib/domain/orderService";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
+
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { searchParams } = new URL(req.url);
   const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
 
@@ -19,7 +22,6 @@ export async function GET(req: NextRequest) {
   const where: Record<string, unknown> = {};
 
   if (!isAdmin) {
-    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     where.userId = session.user.id;
   }
 
