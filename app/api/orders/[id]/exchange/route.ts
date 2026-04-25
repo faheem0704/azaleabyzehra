@@ -53,66 +53,76 @@ export async function POST(
     );
   }
 
-  // Verify new variant exists and has sufficient stock
-  const newVariant = await prisma.productVariant.findUnique({
-    where: {
-      productId_size_color: {
-        productId: item.productId,
-        size: newSize.trim(),
-        color: newColor.trim(),
-      },
-    },
-  });
+  // Atomic swap with FOR UPDATE lock to prevent concurrent oversell.
+  // The raw SELECT ... FOR UPDATE acquires row locks before we read stock,
+  // so two concurrent exchanges for the last unit cannot both pass the check.
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Lock the relevant variant rows for this product
+      await tx.$queryRaw`
+        SELECT id FROM product_variants
+        WHERE "productId" = ${item.productId}
+          AND (
+            (size = ${newSize.trim()} AND color = ${newColor.trim()})
+            OR (size = ${item.size} AND color = ${item.color})
+          )
+        FOR UPDATE
+      `;
 
-  if (!newVariant) {
-    return NextResponse.json(
-      { error: "This size/color combination is not available" },
-      { status: 400 }
-    );
-  }
-  if (newVariant.stock < item.quantity) {
-    return NextResponse.json(
-      { error: `Only ${newVariant.stock} unit(s) in stock for this option` },
-      { status: 400 }
-    );
-  }
+      // Now read stock values — guaranteed fresh because of the lock above
+      const newVariantRecord = await tx.productVariant.findUnique({
+        where: { productId_size_color: { productId: item.productId, size: newSize.trim(), color: newColor.trim() } },
+        select: { id: true, stock: true },
+      });
 
-  // Find the old variant to restore stock
-  const oldVariant = await prisma.productVariant.findUnique({
-    where: {
-      productId_size_color: {
-        productId: item.productId,
-        size: item.size,
-        color: item.color,
-      },
-    },
-  });
+      if (!newVariantRecord) {
+        throw Object.assign(new Error("VARIANT_UNAVAILABLE"), {});
+      }
+      if (newVariantRecord.stock < item.quantity) {
+        throw Object.assign(new Error("OUT_OF_STOCK"), { available: newVariantRecord.stock });
+      }
 
-  // Atomic swap: decrement new variant stock, restore old variant stock, update order item
-  await prisma.$transaction(async (tx) => {
-    await tx.productVariant.update({
-      where: { id: newVariant.id },
-      data: { stock: { decrement: item.quantity } },
-    });
-
-    if (oldVariant) {
       await tx.productVariant.update({
-        where: { id: oldVariant.id },
-        data: { stock: { increment: item.quantity } },
+        where: { id: newVariantRecord.id },
+        data: { stock: { decrement: item.quantity } },
       });
-    } else {
-      // Fallback: old variant record missing — increment product-level stock
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: { increment: item.quantity } },
-      });
-    }
 
-    await tx.orderItem.update({
-      where: { id: orderItemId },
-      data: { size: newSize.trim(), color: newColor.trim() },
+      const oldVariantRecord = await tx.productVariant.findUnique({
+        where: { productId_size_color: { productId: item.productId, size: item.size, color: item.color } },
+        select: { id: true },
+      });
+
+      if (oldVariantRecord) {
+        await tx.productVariant.update({
+          where: { id: oldVariantRecord.id },
+          data: { stock: { increment: item.quantity } },
+        });
+      } else {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } },
+        });
+      }
+
+      await tx.orderItem.update({
+        where: { id: orderItemId },
+        data: { size: newSize.trim(), color: newColor.trim() },
+      });
     });
-  });
+  } catch (err) {
+    const e = err as Error & { available?: number };
+    if (e.message === "VARIANT_UNAVAILABLE") {
+      return NextResponse.json({ error: "This size/color combination is not available" }, { status: 400 });
+    }
+    if (e.message === "OUT_OF_STOCK") {
+      return NextResponse.json(
+        { error: `Only ${e.available} unit(s) in stock for this option` },
+        { status: 400 }
+      );
+    }
+    console.error("Exchange transaction error:", err);
+    return NextResponse.json({ error: "Failed to exchange item" }, { status: 500 });
+  }
 
   // Re-sync product.stock to sum of all variant stocks
   const aggregate = await prisma.productVariant.aggregate({

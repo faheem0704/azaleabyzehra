@@ -378,10 +378,7 @@ export async function POST(req: NextRequest) {
         const key = `${item.productId}:${item.size}:${item.color}`;
         const newStock = updatedVariants.get(key);
         if (newStock !== undefined && newStock <= lowStockThreshold) {
-          const prod = await prisma.product.findUnique({
-            where: { id: item.productId },
-            select: { name: true },
-          });
+          const prod = allProductMap.get(item.productId);
           sendLowStockAlert(adminEmail, {
             productName: prod?.name ?? item.productId,
             size: item.size,

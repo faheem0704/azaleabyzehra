@@ -20,7 +20,12 @@ export default auth((req) => {
   }
 
   // Protect user-only routes
-  if (pathname.startsWith("/orders") || pathname.startsWith("/wishlist") || pathname.startsWith("/checkout")) {
+  if (
+    pathname.startsWith("/orders") ||
+    pathname.startsWith("/wishlist") ||
+    pathname.startsWith("/checkout") ||
+    pathname.startsWith("/account")
+  ) {
     if (!session) {
       return NextResponse.redirect(new URL(`/login?callbackUrl=${pathname}`, req.url));
     }
@@ -31,5 +36,5 @@ export default auth((req) => {
 
 export const config = {
   // Exclude /admin/login from the middleware so the login page is never intercepted
-  matcher: ["/admin/((?!login).*)", "/orders/:path*", "/wishlist/:path*", "/checkout/:path*", "/checkout"],
+  matcher: ["/admin/((?!login).*)", "/orders/:path*", "/wishlist/:path*", "/checkout/:path*", "/checkout", "/account/:path*"],
 };

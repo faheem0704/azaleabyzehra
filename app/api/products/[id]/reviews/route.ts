@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Please sign in to leave a review" }, { status: 401 });
+  }
+
+  // Rate-limit: max 5 review submissions per user per hour
+  if (!checkRateLimit(`review:${session.user.id}`, 5, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
   }
 
   const { rating, comment, images } = await req.json();
