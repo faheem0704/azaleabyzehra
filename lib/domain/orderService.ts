@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { PaymentGateway } from "@/src/generated/prisma/client";
 import {
   sendOrderConfirmationEmail,
   sendNewOrderAlert,
@@ -309,8 +310,8 @@ export async function createOrder(input: CreateOrderInput) {
         throw new OrderError("OUT_OF_STOCK", 409, stockErrors);
       }
 
-      const VALID_GATEWAYS = ["RAZORPAY", "STRIPE"];
-      if (paymentGateway && !VALID_GATEWAYS.includes(paymentGateway)) {
+      const VALID_GATEWAYS = ["RAZORPAY", "STRIPE"] as const;
+      if (paymentGateway && !VALID_GATEWAYS.includes(paymentGateway as typeof VALID_GATEWAYS[number])) {
         throw new OrderError(`Invalid payment gateway: ${paymentGateway}`, 400);
       }
 
@@ -325,7 +326,7 @@ export async function createOrder(input: CreateOrderInput) {
           paymentId: paymentId || null,
           razorpayOrderId: razorpayOrderId || null,
           paymentStatus: paymentId ? "PAID" : "PENDING",
-          paymentGateway: paymentGateway || null,
+          paymentGateway: (paymentGateway as PaymentGateway) || null,
           items: {
             create: authorizedItems.map((item) => ({
               productId: item.productId,
