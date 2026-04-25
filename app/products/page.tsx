@@ -4,6 +4,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import ProductsPageClient from "@/components/products/ProductsPageClient";
 import ProductsLoading from "./loading";
 import { prisma } from "@/lib/prisma";
+import { getCachedCategoryIds } from "@/lib/categoryCache";
 
 export const metadata = {
   title: "Shop All",
@@ -43,14 +44,8 @@ const getCachedProducts = unstable_cache(
     const where: Record<string, unknown> = { isDeleted: false };
 
     if (category) {
-      const cat = await prisma.category.findFirst({
-        where: { slug: category },
-        include: { children: true },
-      });
-      if (cat) {
-        const ids = [cat.id, ...cat.children.map((c: { id: string }) => c.id)];
-        where.categoryId = { in: ids };
-      }
+      const ids = await getCachedCategoryIds(category);
+      if (ids) where.categoryId = { in: ids };
     }
 
     if (minPrice || maxPrice) {

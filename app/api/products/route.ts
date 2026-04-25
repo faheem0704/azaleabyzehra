@@ -3,6 +3,7 @@ import { unstable_cache, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { slugify } from "@/lib/utils";
+import { getCachedCategoryIds } from "@/lib/categoryCache";
 
 const getCachedProducts = unstable_cache(
   async (params: {
@@ -28,14 +29,8 @@ const getCachedProducts = unstable_cache(
     const where: Record<string, unknown> = { isDeleted: false };
 
     if (category) {
-      const cat = await prisma.category.findFirst({
-        where: { slug: category },
-        include: { children: true },
-      });
-      if (cat) {
-        const ids = [cat.id, ...cat.children.map((c: { id: string }) => c.id)];
-        where.categoryId = { in: ids };
-      }
+      const ids = await getCachedCategoryIds(category);
+      if (ids) where.categoryId = { in: ids };
     }
 
     if (minPrice || maxPrice) {
