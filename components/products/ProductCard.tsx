@@ -104,9 +104,6 @@ export default function ProductCard({ product, onQuickView, priority = false }: 
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => { setIsHovered(false); setImageIndex(0); }}
       className="group relative"

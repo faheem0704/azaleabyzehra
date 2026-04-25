@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { unstable_cache } from "next/cache";
 import MainLayout from "@/components/layout/MainLayout";
 import ProductsPageClient from "@/components/products/ProductsPageClient";
+import ProductsLoading from "./loading";
 import { prisma } from "@/lib/prisma";
 
 export const metadata = {
@@ -104,10 +105,10 @@ const getCachedProducts = unstable_cache(
     return { products, total, totalPages: Math.ceil(total / pageSize) };
   },
   ["products-page"],
-  { tags: ["products"], revalidate: 60 }
+  { tags: ["products"], revalidate: 3600 }
 );
 
-async function getProducts(params: {
+interface ProductParams {
   category: string;
   sort: string;
   colors: string[];
@@ -119,17 +120,28 @@ async function getProducts(params: {
   search: string;
   featured: boolean;
   isNewArrival: boolean;
-}) {
+}
+
+// Async component — fetches data inside Suspense so the shell streams first
+async function ProductsContent(params: ProductParams) {
+  let data = null;
   try {
-    return await getCachedProducts({
+    data = await getCachedProducts({
       ...params,
       colors: params.colors.join(","),
       sizes: params.sizes.join(","),
       fabrics: params.fabrics.join(","),
     });
-  } catch {
-    return null;
-  }
+  } catch {}
+
+  return (
+    <ProductsPageClient
+      initialProducts={data?.products ?? null}
+      initialTotal={data?.total ?? null}
+      initialTotalPages={data?.totalPages ?? null}
+      initialPage={params.page}
+    />
+  );
 }
 
 interface ProductsPageProps {
@@ -148,7 +160,8 @@ interface ProductsPageProps {
   };
 }
 
-export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+// Non-async page — MainLayout/nav streams immediately while products load
+export default function ProductsPage({ searchParams }: ProductsPageProps) {
   const category = searchParams.category ?? "";
   const sort = searchParams.sort ?? "newest";
   const colors = searchParams.colors?.split(",").filter(Boolean) ?? [];
@@ -161,16 +174,21 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const featured = searchParams.featured === "true";
   const isNewArrival = searchParams.isNewArrival === "true";
 
-  const data = await getProducts({ category, sort, colors, sizes, fabrics, minPrice, maxPrice, page, search, featured, isNewArrival });
-
   return (
     <MainLayout>
-      <Suspense fallback={<div className="pt-32 pb-24 section-padding"><div className="h-96 bg-ivory-200 animate-pulse" /></div>}>
-        <ProductsPageClient
-          initialProducts={data?.products ?? null}
-          initialTotal={data?.total ?? null}
-          initialTotalPages={data?.totalPages ?? null}
-          initialPage={page}
+      <Suspense fallback={<ProductsLoading />}>
+        <ProductsContent
+          category={category}
+          sort={sort}
+          colors={colors}
+          sizes={sizes}
+          fabrics={fabrics}
+          minPrice={minPrice}
+          maxPrice={maxPrice}
+          page={page}
+          search={search}
+          featured={featured}
+          isNewArrival={isNewArrival}
         />
       </Suspense>
     </MainLayout>

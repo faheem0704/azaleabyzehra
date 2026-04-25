@@ -113,7 +113,7 @@ const getCachedProducts = unstable_cache(
     return { products, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
   },
   ["products-list"],
-  { tags: ["products"], revalidate: 60 }
+  { tags: ["products"], revalidate: 3600 }
 );
 
 export async function GET(req: NextRequest) {
@@ -137,7 +137,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json(
     { data: result.products, total: result.total, page: result.page, pageSize: result.pageSize, totalPages: result.totalPages },
-    { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" } }
+    { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=600" } }
   );
 }
 

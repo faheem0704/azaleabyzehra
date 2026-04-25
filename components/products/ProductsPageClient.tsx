@@ -116,16 +116,6 @@ export default function ProductsPageClient({
 
   const loading = isPending;
 
-  const skeletons = Array.from({ length: 12 }).map((_, i) => (
-    <div key={i} className="animate-pulse">
-      <div className="aspect-[3/4] bg-ivory-200" />
-      <div className="mt-3 space-y-2 px-1">
-        <div className="h-3 bg-ivory-200 w-3/4" />
-        <div className="h-3 bg-ivory-200 w-1/2" />
-      </div>
-    </div>
-  ));
-
   const productGrid = (extraClass = "") => (
     <div className={`grid grid-cols-2 lg:grid-cols-3 ${extraClass}`}>
       {products.map((product, i) => (
@@ -204,9 +194,7 @@ export default function ProductsPageClient({
           onMobileOpenChange={() => {}}
         />
         <div className="flex-1 min-w-0">
-          {loading ? (
-            <div className="grid grid-cols-3 gap-6">{skeletons}</div>
-          ) : products.length === 0 ? (
+          {products.length === 0 && !loading ? (
             <div className="text-center py-24">
               <p className="font-playfair text-2xl text-charcoal-light mb-4">No products found</p>
               <p className="font-inter text-sm text-mauve mb-8">
@@ -215,19 +203,17 @@ export default function ProductsPageClient({
               <button onClick={handleReset} className="btn-outline">Clear Filters</button>
             </div>
           ) : (
-            <>
+            <div className={`transition-opacity duration-150 ${loading ? "opacity-50 pointer-events-none" : ""}`}>
               {productGrid("gap-6")}
               {pagination}
-            </>
+            </div>
           )}
         </div>
       </div>
 
       {/* ── Mobile / tablet layout ── */}
       <div className="lg:hidden px-3 md:px-6">
-        {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">{skeletons}</div>
-        ) : products.length === 0 ? (
+        {products.length === 0 && !loading ? (
           <div className="text-center py-24">
             <p className="font-playfair text-2xl text-charcoal-light mb-4">No products found</p>
             <p className="font-inter text-sm text-mauve mb-8">
@@ -236,10 +222,10 @@ export default function ProductsPageClient({
             <button onClick={handleReset} className="btn-outline">Clear Filters</button>
           </div>
         ) : (
-          <>
+          <div className={`transition-opacity duration-150 ${loading ? "opacity-50 pointer-events-none" : ""}`}>
             {productGrid("gap-3 md:gap-4 md:grid-cols-3")}
             {pagination}
-          </>
+          </div>
         )}
       </div>
 
