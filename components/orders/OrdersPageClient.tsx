@@ -28,7 +28,7 @@ interface ExchangeTarget {
   productName: string;
 }
 
-export default function OrdersPageClient({ orders: initial }: { orders: any[] }) {
+export default function OrdersPageClient({ orders: initial, fetchError }: { orders: any[]; fetchError?: string | null }) {
   const [orders, setOrders] = useState(initial);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
@@ -141,6 +141,20 @@ export default function OrdersPageClient({ orders: initial }: { orders: any[] })
       setExchangeLoading(false);
     }
   };
+
+  if (fetchError) {
+    return (
+      <div className="pt-32 pb-24 section-padding">
+        <div className="max-w-4xl mx-auto text-center py-24 border border-ivory-200">
+          <p className="font-playfair text-4xl text-charcoal mb-4">Could not load orders</p>
+          <p className="font-mono text-xs text-red-500 bg-red-50 border border-red-200 px-4 py-2 mb-6 text-left break-all max-w-xl mx-auto">
+            {fetchError}
+          </p>
+          <Link href="/" className="btn-outline">Back to Home</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pt-32 pb-24 section-padding">
