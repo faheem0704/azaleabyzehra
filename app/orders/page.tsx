@@ -18,9 +18,34 @@ export default async function OrdersPage() {
   try {
     const result = await prisma.order.findMany({
       where: { userId: session.user.id },
-      include: {
-        items: { include: { product: { select: { id: true, name: true, images: true } } } },
-        address: true,
+      select: {
+        id: true,
+        createdAt: true,
+        totalAmount: true,
+        status: true,
+        trackingId: true,
+        courierName: true,
+        items: {
+          select: {
+            id: true,
+            size: true,
+            color: true,
+            quantity: true,
+            price: true,
+            product: { select: { id: true, name: true, images: true } },
+          },
+        },
+        address: {
+          select: {
+            name: true,
+            phone: true,
+            line1: true,
+            line2: true,
+            city: true,
+            state: true,
+            pincode: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     });

@@ -1,6 +1,7 @@
-export const revalidate = 60;
+export const revalidate = 3600;
 
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -81,18 +82,24 @@ export default async function ProductDetailPage({ params }: Props) {
   const product = await getProduct(params.slug);
   if (!product) notFound();
 
-  const related = await prisma.product.findMany({
-    where: { categoryId: product.categoryId, isDeleted: false, NOT: { id: product.id } },
-    take: 4,
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true, name: true, slug: true, price: true, compareAtPrice: true,
-      images: true, imageAlts: true, stock: true, featured: true, isNewArrival: true,
-      categoryId: true, sizes: true, colors: true, fabric: true,
-      description: true, createdAt: true,
-      category: { select: { id: true, name: true, slug: true, parentId: true } },
-    },
-  });
+  const getRelated = unstable_cache(
+    (categoryId: string, excludeId: string) =>
+      prisma.product.findMany({
+        where: { categoryId, isDeleted: false, NOT: { id: excludeId } },
+        take: 4,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true, name: true, slug: true, price: true, compareAtPrice: true,
+          images: true, imageAlts: true, stock: true, featured: true, isNewArrival: true,
+          categoryId: true, sizes: true, colors: true, fabric: true,
+          description: true, createdAt: true,
+          category: { select: { id: true, name: true, slug: true, parentId: true } },
+        },
+      }),
+    ["related-products"],
+    { tags: ["products"], revalidate: 3600 }
+  );
+  const related = await getRelated(product.categoryId, product.id);
 
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://azaleabyzehra.com";
   const desc = product.description.replace(/<[^>]+>/g, "").slice(0, 500) || `Shop ${product.name} at Azalea by Zehra`;

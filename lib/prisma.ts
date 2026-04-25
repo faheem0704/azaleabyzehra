@@ -22,6 +22,10 @@ function createPrismaClient() {
       idleTimeoutMillis: isServerless ? 10000 : 30000,
       connectionTimeoutMillis: 5000,
       allowExitOnIdle: false,
+      // Keep TCP connections alive so warm serverless invocations skip the
+      // TCP handshake + TLS negotiation on every request (~100-300ms saved).
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
     });
 
   if (!globalForPrisma.pool) globalForPrisma.pool = pool;
