@@ -241,11 +241,13 @@ export default function OrdersPageClient({ orders: initial }: { orders: any[] })
                 })()}
 
                 {/* Address */}
-                <div className="border-t border-ivory-200 px-6 py-3">
-                  <p className="font-inter text-xs text-mauve">
-                    {order.address.name} · {order.address.phone} · {order.address.line1}{order.address.line2 ? `, ${order.address.line2}` : ""}, {order.address.city}, {order.address.state} — {order.address.pincode}
-                  </p>
-                </div>
+                {order.address && (
+                  <div className="border-t border-ivory-200 px-6 py-3">
+                    <p className="font-inter text-xs text-mauve">
+                      {order.address.name} · {order.address.phone} · {order.address.line1}{order.address.line2 ? `, ${order.address.line2}` : ""}, {order.address.city}, {order.address.state} — {order.address.pincode}
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

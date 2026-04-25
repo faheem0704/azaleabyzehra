@@ -115,6 +115,10 @@ model Product {
   @@index([isDeleted, isNewArrival])   // homepage new arrivals
   @@index([isDeleted, price])          // price sort
   @@index([categoryId, isDeleted])     // category filter page
+  @@index([isDeleted, fabric])         // fabric filter
+  // GIN indexes for array filter operators (hasSome = && in Postgres — needs GIN to avoid full table scan)
+  @@index([colorFamilies], type: Gin)
+  @@index([sizes], type: Gin)
   @@map("products")
 }
 
