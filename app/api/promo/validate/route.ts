@@ -12,8 +12,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Too many requests. Please wait a moment." }, { status: 429 });
     }
 
-    const { code, items, subtotal } = await req.json();
-    // items: { productId: string; price: number; quantity: number }[]
+    const { code, items } = await req.json();
+    // items: { productId: string; quantity: number }[]
 
     if (!code?.trim()) {
       return NextResponse.json({ error: "Promo code is required" }, { status: 400 });
@@ -31,6 +31,22 @@ export async function POST(req: NextRequest) {
     if (promo.usageLimit && promo.usageCount >= promo.usageLimit) {
       return NextResponse.json({ error: "This promo code has reached its usage limit" }, { status: 400 });
     }
+
+    // Fetch DB prices — never trust client-sent prices for discount calculation
+    const itemList = Array.isArray(items) ? (items as { productId: string; quantity: number }[]) : [];
+    const productIds = Array.from(new Set(itemList.map((i) => i.productId)));
+    const dbProducts = await prisma.product.findMany({
+      where: { id: { in: productIds }, isDeleted: false },
+      select: { id: true, price: true },
+    });
+    const dbPriceMap = new Map(dbProducts.map((p) => [p.id, p.price]));
+
+    const authorizedItems = itemList
+      .filter((i) => dbPriceMap.has(i.productId))
+      .map((i) => ({ productId: i.productId, quantity: i.quantity, price: dbPriceMap.get(i.productId)! }));
+
+    const subtotal = authorizedItems.reduce((s, i) => s + i.price * i.quantity, 0);
+
     if (promo.minOrderAmount && subtotal < promo.minOrderAmount) {
       return NextResponse.json({
         error: `Minimum order of ₹${promo.minOrderAmount.toLocaleString("en-IN")} required for this code`,
@@ -39,10 +55,10 @@ export async function POST(req: NextRequest) {
 
     // Calculate eligible subtotal (all items if productIds is empty, else only matching)
     let eligibleSubtotal = subtotal;
-    if (promo.productIds.length > 0 && Array.isArray(items)) {
-      eligibleSubtotal = items
-        .filter((i: { productId: string }) => promo.productIds.includes(i.productId))
-        .reduce((sum: number, i: { price: number; quantity: number }) => sum + i.price * i.quantity, 0);
+    if (promo.productIds.length > 0) {
+      eligibleSubtotal = authorizedItems
+        .filter((i) => promo.productIds.includes(i.productId))
+        .reduce((sum, i) => sum + i.price * i.quantity, 0);
 
       if (eligibleSubtotal === 0) {
         return NextResponse.json({ error: "No items in your cart are eligible for this promo code" }, { status: 400 });

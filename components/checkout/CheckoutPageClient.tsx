@@ -221,8 +221,7 @@ export default function CheckoutPageClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: promoInput.trim(),
-          items: items.map((i) => ({ productId: i.productId, price: i.price, quantity: i.quantity })),
-          subtotal,
+          items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
         }),
       });
       const data = await res.json();
@@ -285,18 +284,29 @@ export default function CheckoutPageClient() {
           razorpay_order_id: string;
           razorpay_signature: string;
         }) => {
-          const verifyRes = await fetch("/api/payment/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-            }),
-          });
-          const { verified, paymentId } = await verifyRes.json();
-          if (verified) await placeOrder(paymentId, "RAZORPAY", response.razorpay_order_id);
-          else toast.error("Payment verification failed");
+          try {
+            const verifyRes = await fetch("/api/payment/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              }),
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok || !verifyData.verified) {
+              toast.error("Payment verification failed. Please contact support with your payment ID.");
+              setLoading(false);
+              return;
+            }
+            // Pass the server-issued paymentToken alongside paymentId so /api/orders
+            // can confirm the signature was actually verified server-side.
+            await placeOrder(verifyData.paymentId, "RAZORPAY", response.razorpay_order_id, verifyData.paymentToken);
+          } catch {
+            toast.error("Payment was received but order creation failed. Please contact support.");
+            setLoading(false);
+          }
         },
         modal: {
           ondismiss: () => {
@@ -319,7 +329,7 @@ export default function CheckoutPageClient() {
     }
   };
 
-  const placeOrder = async (paymentId?: string, gateway?: string, razorpayOrderId?: string) => {
+  const placeOrder = async (paymentId?: string, gateway?: string, razorpayOrderId?: string, paymentToken?: string) => {
     setLoading(true);
     try {
       const res = await fetch("/api/orders", {
@@ -331,8 +341,9 @@ export default function CheckoutPageClient() {
             size: i.size, color: i.color, price: i.price,
           })),
           address,
-          selectedAddressId, // BUG-04: send saved address ID to avoid duplicate creation
+          selectedAddressId,
           paymentId,
+          paymentToken: paymentToken ?? null,
           razorpayOrderId: razorpayOrderId ?? null,
           paymentGateway: gateway,
           promoCode: appliedPromo?.code,
