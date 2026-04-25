@@ -106,7 +106,7 @@ export default function ProductCard({ product, onQuickView, priority = false }: 
     <motion.div
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => { setIsHovered(false); setImageIndex(0); }}
-      className="group relative"
+      className="group relative animate-fade-in-up"
     >
       <Link href={`/products/${product.slug}`}>
         {/* Image */}

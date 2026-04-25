@@ -194,12 +194,12 @@ export default function OrdersPageClient({ orders: initial }: { orders: any[] })
                   {order.items.map((item: any) => (
                     <div key={item.id} className="flex items-center gap-4">
                       <div className="relative w-14 flex-shrink-0 bg-ivory-200 overflow-hidden" style={{ height: 72 }}>
-                        {item.product.images[0] && (
-                          <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover" />
+                        {item.product?.images?.[0] && (
+                          <img src={item.product.images[0]} alt={item.product.name ?? ""} className="w-full h-full object-cover" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-inter text-sm text-charcoal line-clamp-1">{item.product.name}</p>
+                        <p className="font-inter text-sm text-charcoal line-clamp-1">{item.product?.name ?? "Product unavailable"}</p>
                         <p className="font-inter text-xs text-mauve mt-0.5">{item.size} · {item.color} · Qty: {item.quantity}</p>
                         {order.status === "PENDING" && (
                           <button

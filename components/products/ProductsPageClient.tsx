@@ -149,10 +149,10 @@ export default function ProductsPageClient({
     <div className="pt-24 lg:pt-32 pb-24">
       {/* Page Header */}
       <div className="section-padding mb-4 lg:mb-10">
-        <p className="section-subtitle mb-3">
+        <p className="section-subtitle mb-3 animate-fade-in-up">
           {searchQuery ? "Search Results" : "Collections"}
         </p>
-        <h1 className="font-playfair text-4xl md:text-5xl text-charcoal capitalize">
+        <h1 className="font-playfair text-4xl md:text-5xl text-charcoal capitalize animate-fade-in-up animation-delay-75">
           {searchQuery ? `"${searchQuery}"` : categoryName.replace(/-/g, " ")}
         </h1>
 
